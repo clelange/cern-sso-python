@@ -6,7 +6,6 @@ import subprocess
 import tempfile
 from http.cookiejar import MozillaCookieJar
 from pathlib import Path
-
 from typing import Optional, Union
 
 from .cookies import load_cookies

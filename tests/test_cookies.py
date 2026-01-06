@@ -62,5 +62,5 @@ class TestToRequestsJar:
         with pytest.MonkeyPatch.context() as mp:
             mp.setitem(sys.modules, "requests", None)
             mp.setitem(sys.modules, "requests.cookies", None)
-            with pytest.raises(ImportError, match="requests package is required"):
+            with pytest.raises(ImportError, match="'requests' package is required"):
                 to_requests_jar(jar)

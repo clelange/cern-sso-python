@@ -81,14 +81,10 @@ class TestGetCookies:
             ".example.com\tTRUE\t/\tFALSE\t0\tsession\tabc123\n"
         )
 
-        def mock_run(cmd, **kwargs):
-            result = MagicMock()
-            result.stdout = ""
-            result.stderr = ""
-            result.returncode = 0
-            return result
+        def mock_run_cli(args, **kwargs):
+            return subprocess.CompletedProcess(args, 0, "", "")
 
-        with patch("subprocess.run", side_effect=mock_run):
+        with patch("cern_sso.CERNSSOClient._run_cli", side_effect=mock_run_cli):
             with patch("shutil.which", return_value="/usr/bin/cern-sso-cli"):
                 client = CERNSSOClient(verify_version=False)
                 jar = client.get_cookies("https://example.com", file=str(cookie_file))
@@ -104,15 +100,11 @@ class TestGetCookies:
 
         commands_run = []
 
-        def mock_run(cmd, **kwargs):
-            commands_run.append(cmd)
-            result = MagicMock()
-            result.stdout = ""
-            result.stderr = ""
-            result.returncode = 0
-            return result
+        def mock_run_cli(args, **kwargs):
+            commands_run.append(args)
+            return subprocess.CompletedProcess(args, 0, "", "")
 
-        with patch("subprocess.run", side_effect=mock_run):
+        with patch("cern_sso.CERNSSOClient._run_cli", side_effect=mock_run_cli):
             with patch("shutil.which", return_value="/usr/bin/cern-sso-cli"):
                 client = CERNSSOClient(verify_version=False)
                 client.get_cookies(
@@ -140,14 +132,10 @@ class TestGetToken:
             "token_type": "Bearer",
         }
 
-        def mock_run(cmd, **kwargs):
-            result = MagicMock()
-            result.stdout = json.dumps(token_response)
-            result.stderr = ""
-            result.returncode = 0
-            return result
+        def mock_run_cli(args, **kwargs):
+            return subprocess.CompletedProcess(args, 0, json.dumps(token_response), "")
 
-        with patch("subprocess.run", side_effect=mock_run):
+        with patch("cern_sso.CERNSSOClient._run_cli", side_effect=mock_run_cli):
             with patch("shutil.which", return_value="/usr/bin/cern-sso-cli"):
                 client = CERNSSOClient(verify_version=False)
                 token = client.get_token("my-client", "https://redirect")
@@ -164,14 +152,10 @@ class TestGetToken:
             "expires_in": 3600,
         }
 
-        def mock_run(cmd, **kwargs):
-            result = MagicMock()
-            result.stdout = json.dumps(token_response)
-            result.stderr = ""
-            result.returncode = 0
-            return result
+        def mock_run_cli(args, **kwargs):
+            return subprocess.CompletedProcess(args, 0, json.dumps(token_response), "")
 
-        with patch("subprocess.run", side_effect=mock_run):
+        with patch("cern_sso.CERNSSOClient._run_cli", side_effect=mock_run_cli):
             with patch("shutil.which", return_value="/usr/bin/cern-sso-cli"):
                 client = CERNSSOClient(verify_version=False)
                 token = client.get_token("my-client", "https://redirect")
@@ -193,14 +177,10 @@ class TestDeviceFlow:
             "refresh_token": "eyJref...",
         }
 
-        def mock_run(cmd, **kwargs):
-            result = MagicMock()
-            result.stdout = json.dumps(token_response)
-            result.stderr = ""
-            result.returncode = 0
-            return result
+        def mock_run_cli(args, **kwargs):
+            return subprocess.CompletedProcess(args, 0, json.dumps(token_response), "")
 
-        with patch("subprocess.run", side_effect=mock_run):
+        with patch("cern_sso.CERNSSOClient._run_cli", side_effect=mock_run_cli):
             with patch("shutil.which", return_value="/usr/bin/cern-sso-cli"):
                 client = CERNSSOClient(verify_version=False)
                 token = client.device_flow("my-client")
@@ -212,15 +192,11 @@ class TestDeviceFlow:
         """Test device flow disables quiet mode."""
         commands_run = []
 
-        def mock_run(cmd, **kwargs):
-            commands_run.append(cmd)
-            result = MagicMock()
-            result.stdout = '{"access_token": "test", "token_type": "Bearer"}'
-            result.stderr = ""
-            result.returncode = 0
-            return result
+        def mock_run_cli(args, **kwargs):
+            commands_run.append(args)
+            return subprocess.CompletedProcess(args, 0, '{"access_token": "test", "token_type": "Bearer"}', "")
 
-        with patch("subprocess.run", side_effect=mock_run):
+        with patch("cern_sso.CERNSSOClient._run_cli", side_effect=mock_run_cli):
             with patch("shutil.which", return_value="/usr/bin/cern-sso-cli"):
                 client = CERNSSOClient(verify_version=False, quiet=True)
                 client.device_flow("my-client")

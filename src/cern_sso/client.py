@@ -7,6 +7,8 @@ import tempfile
 from http.cookiejar import MozillaCookieJar
 from pathlib import Path
 
+from typing import Optional, Union
+
 from .cookies import load_cookies
 from .exceptions import AuthenticationError, CLINotFoundError, CLIVersionError
 from .tokens import TokenResult
@@ -29,7 +31,7 @@ class CERNSSOClient:
 
     def __init__(
         self,
-        cli_path: str | None = None,
+        cli_path: Optional[str] = None,
         quiet: bool = True,
         verify_version: bool = True,
     ):
@@ -166,15 +168,15 @@ class CERNSSOClient:
         self,
         url: str,
         *,
-        file: str | Path | None = None,
-        user: str | None = None,
-        otp: str | None = None,
-        otp_command: str | None = None,
-        otp_retries: int | None = None,
+        file: Union[str, Path, None] = None,
+        user: Optional[str] = None,
+        otp: Optional[str] = None,
+        otp_command: Optional[str] = None,
+        otp_retries: Optional[int] = None,
         use_otp: bool = False,
         use_webauthn: bool = False,
-        webauthn_pin: str | None = None,
-        webauthn_device: str | None = None,
+        webauthn_pin: Optional[str] = None,
+        webauthn_device: Optional[str] = None,
         force: bool = False,
         insecure: bool = False,
         auth_host: str = "auth.cern.ch",
@@ -255,14 +257,14 @@ class CERNSSOClient:
         client_id: str,
         redirect_uri: str,
         *,
-        user: str | None = None,
-        otp: str | None = None,
-        otp_command: str | None = None,
-        otp_retries: int | None = None,
+        user: Optional[str] = None,
+        otp: Optional[str] = None,
+        otp_command: Optional[str] = None,
+        otp_retries: Optional[int] = None,
         use_otp: bool = False,
         use_webauthn: bool = False,
-        webauthn_pin: str | None = None,
-        webauthn_device: str | None = None,
+        webauthn_pin: Optional[str] = None,
+        webauthn_device: Optional[str] = None,
         insecure: bool = False,
         auth_host: str = "auth.cern.ch",
         realm: str = "cern",
@@ -391,7 +393,7 @@ class CERNSSOClient:
 
 
 # Default client instance for convenience functions
-_default_client: CERNSSOClient | None = None
+_default_client: Optional[CERNSSOClient] = None
 
 
 def _get_default_client() -> CERNSSOClient:

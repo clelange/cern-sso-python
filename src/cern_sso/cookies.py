@@ -1,12 +1,11 @@
-"""Cookie loading and conversion utilities."""
-
 from http.cookiejar import MozillaCookieJar
 from pathlib import Path
+from typing import Union
 
 from .exceptions import CookieError
 
 
-def load_cookies(path: str | Path) -> MozillaCookieJar:
+def load_cookies(path: Union[str, Path]) -> MozillaCookieJar:
     """Load cookies from a Netscape-format cookie file.
 
     Args:

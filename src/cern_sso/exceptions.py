@@ -1,6 +1,9 @@
 """Custom exceptions for cern-sso-python."""
 
 
+from typing import Optional
+
+
 class CERNSSOError(Exception):
     """Base exception for all cern-sso-python errors."""
 
@@ -10,7 +13,7 @@ class CERNSSOError(Exception):
 class CLINotFoundError(CERNSSOError):
     """Raised when cern-sso-cli executable is not found."""
 
-    def __init__(self, message: str | None = None):
+    def __init__(self, message: Optional[str] = None):
         super().__init__(
             message
             or "cern-sso-cli not found. Install from: https://github.com/clelange/cern-sso-cli"
@@ -31,9 +34,10 @@ class CLIVersionError(CERNSSOError):
 class AuthenticationError(CERNSSOError):
     """Raised when authentication fails."""
 
-    def __init__(self, message: str, stderr: str | None = None):
+    def __init__(self, message: str, stderr: Optional[str] = None):
         self.stderr = stderr
         super().__init__(message)
+
 
 
 class CookieError(CERNSSOError):

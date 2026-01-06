@@ -18,6 +18,7 @@ Quick Start:
 
 from http.cookiejar import MozillaCookieJar
 from pathlib import Path
+from typing import Optional, Union
 
 from .client import CERNSSOClient, _get_default_client
 from .cookies import load_cookies, to_requests_jar
@@ -55,15 +56,15 @@ __all__ = [
 def get_cookies(
     url: str,
     *,
-    file: str | Path | None = None,
-    user: str | None = None,
-    otp: str | None = None,
-    otp_command: str | None = None,
-    otp_retries: int | None = None,
+    file: Union[str, Path, None] = None,
+    user: Optional[str] = None,
+    otp: Optional[str] = None,
+    otp_command: Optional[str] = None,
+    otp_retries: Optional[int] = None,
     use_otp: bool = False,
     use_webauthn: bool = False,
-    webauthn_pin: str | None = None,
-    webauthn_device: str | None = None,
+    webauthn_pin: Optional[str] = None,
+    webauthn_device: Optional[str] = None,
     force: bool = False,
     insecure: bool = False,
     auth_host: str = "auth.cern.ch",
@@ -121,14 +122,14 @@ def get_token(
     client_id: str,
     redirect_uri: str,
     *,
-    user: str | None = None,
-    otp: str | None = None,
-    otp_command: str | None = None,
-    otp_retries: int | None = None,
+    user: Optional[str] = None,
+    otp: Optional[str] = None,
+    otp_command: Optional[str] = None,
+    otp_retries: Optional[int] = None,
     use_otp: bool = False,
     use_webauthn: bool = False,
-    webauthn_pin: str | None = None,
-    webauthn_device: str | None = None,
+    webauthn_pin: Optional[str] = None,
+    webauthn_device: Optional[str] = None,
     insecure: bool = False,
     auth_host: str = "auth.cern.ch",
     realm: str = "cern",

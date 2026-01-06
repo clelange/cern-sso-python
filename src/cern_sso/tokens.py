@@ -1,7 +1,5 @@
-"""Token result types for OAuth2 responses."""
-
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Optional
 
 
 class TokenResult(dict):
@@ -20,7 +18,7 @@ class TokenResult(dict):
         datetime.datetime(2024, 1, 1, 12, 0, 0)
     """
 
-    def __init__(self, data: dict[str, Any], fetched_at: datetime | None = None):
+    def __init__(self, data: dict[str, Any], fetched_at: Optional[datetime] = None):
         """Initialize token result.
 
         Args:
@@ -41,26 +39,27 @@ class TokenResult(dict):
         return self.get("token_type", "Bearer")
 
     @property
-    def expires_in(self) -> int | None:
+    def expires_in(self) -> Optional[int]:
         """Token lifetime in seconds, if provided."""
         return self.get("expires_in")
 
     @property
-    def refresh_token(self) -> str | None:
+    def refresh_token(self) -> Optional[str]:
         """Refresh token, if provided."""
         return self.get("refresh_token")
 
     @property
-    def scope(self) -> str | None:
+    def scope(self) -> Optional[str]:
         """Token scope, if provided."""
         return self.get("scope")
 
     @property
-    def expires_at(self) -> datetime | None:
+    def expires_at(self) -> Optional[datetime]:
         """Computed expiration datetime, or None if expires_in not set."""
         if self.expires_in is None:
             return None
         return self._fetched_at + timedelta(seconds=self.expires_in)
+
 
     @property
     def is_expired(self) -> bool:

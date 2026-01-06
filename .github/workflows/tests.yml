@@ -1,0 +1,120 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run unit tests
+        run: pytest tests/ -v --tb=short --ignore=tests/integration
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff
+
+      - name: Run ruff
+        run: ruff check src/ tests/
+
+  integration:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Kerberos
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y krb5-user
+
+      - name: Configure Kerberos
+        run: |
+          sudo tee /etc/krb5.conf << 'EOF'
+          [libdefaults]
+              default_realm = CERN.CH
+              dns_lookup_realm = false
+              dns_lookup_kdc = true
+              rdns = false
+              ticket_lifetime = 24h
+              forwardable = true
+              udp_preference_limit = 0
+              default_tgs_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96
+              default_tkt_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96
+              permitted_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96
+
+          [realms]
+              CERN.CH = {
+                  kdc = cerndc.cern.ch
+                  default_domain = cern.ch
+              }
+
+          [domain_realm]
+              .cern.ch = CERN.CH
+              cern.ch = CERN.CH
+          EOF
+
+      - name: Install cern-sso-cli
+        run: |
+          # Download latest release
+          curl -sL https://github.com/clelange/cern-sso-cli/releases/latest/download/cern-sso-cli-linux-amd64.tar.gz | tar xz
+          sudo mv cern-sso-cli /usr/local/bin/
+          cern-sso-cli --version
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Get Kerberos ticket
+        if: env.KRB_USERNAME != '' && env.KRB_PASSWORD != ''
+        env:
+          KRB_USERNAME: ${{ secrets.KRB_USERNAME }}
+          KRB_PASSWORD: ${{ secrets.KRB_PASSWORD }}
+        run: |
+          echo "$KRB_PASSWORD" | kinit "${KRB_USERNAME}@CERN.CH"
+          klist
+
+      - name: Run integration tests
+        if: env.KRB_USERNAME != '' && env.KRB_PASSWORD != ''
+        env:
+          KRB_USERNAME: ${{ secrets.KRB_USERNAME }}
+          KRB_PASSWORD: ${{ secrets.KRB_PASSWORD }}
+        run: pytest tests/integration -v --tb=short -m integration

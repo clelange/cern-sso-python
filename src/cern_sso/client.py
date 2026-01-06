@@ -103,6 +103,7 @@ class CERNSSOClient:
 
         Raises:
             AuthenticationError: If the command fails.
+            KeyboardInterrupt: Propagated after terminating child process.
         """
         self._check_version()
 
@@ -110,18 +111,58 @@ class CERNSSOClient:
         if self._quiet:
             cmd.insert(1, "--quiet")
 
+        import os
+        import signal
+        import threading
+
+        # Always capture stdout (for JSON output parsing)
+        # Let stderr go to terminal so user sees prompts and errors
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=None,  # stderr goes to terminal
+            text=True,
+            start_new_session=True,  # Creates new process group
+        )
+
+        interrupted = False
+        original_handler = signal.getsignal(signal.SIGINT)
+
+        def sigint_handler(signum, frame):
+            nonlocal interrupted
+            interrupted = True
+            # Terminate the entire process group immediately
+            try:
+                os.killpg(proc.pid, signal.SIGTERM)
+            except (ProcessLookupError, PermissionError, OSError):
+                pass
+
+        # Install our handler
+        signal.signal(signal.SIGINT, sigint_handler)
+
         try:
-            return subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                check=check,
-            )
-        except subprocess.CalledProcessError as e:
+            stdout, _ = proc.communicate()
+        finally:
+            # Restore original handler
+            signal.signal(signal.SIGINT, original_handler)
+
+        if interrupted:
+            # Clean up if needed
+            if proc.poll() is None:
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except (ProcessLookupError, PermissionError, OSError):
+                    pass
+                proc.wait()
+            raise KeyboardInterrupt()
+
+        if check and proc.returncode != 0:
             raise AuthenticationError(
-                f"CLI command failed: {' '.join(args)}",
-                stderr=e.stderr,
+                f"Authentication failed (exit code {proc.returncode}). See error above.",
+                stderr="",
             )
+
+        return subprocess.CompletedProcess(cmd, proc.returncode, stdout, "")
 
     def get_cookies(
         self,
@@ -131,6 +172,11 @@ class CERNSSOClient:
         user: str | None = None,
         otp: str | None = None,
         otp_command: str | None = None,
+        otp_retries: int | None = None,
+        use_otp: bool = False,
+        use_webauthn: bool = False,
+        webauthn_pin: str | None = None,
+        webauthn_device: str | None = None,
         force: bool = False,
         insecure: bool = False,
         auth_host: str = "auth.cern.ch",
@@ -143,6 +189,11 @@ class CERNSSOClient:
             user: Kerberos username (e.g., "alice" or "alice@CERN.CH").
             otp: OTP code for 2FA.
             otp_command: Command to get OTP (e.g., "op item get CERN --otp").
+            otp_retries: Max OTP retry attempts.
+            use_otp: Force OTP method even if WebAuthn is default.
+            use_webauthn: Force WebAuthn method even if OTP is default.
+            webauthn_pin: PIN for FIDO2 security key.
+            webauthn_device: Path to specific FIDO2 device.
             force: Force re-authentication even if cookies exist.
             insecure: Skip certificate validation.
             auth_host: Authentication hostname.
@@ -175,6 +226,16 @@ class CERNSSOClient:
             args.extend(["--otp", otp])
         if otp_command:
             args.extend(["--otp-command", otp_command])
+        if otp_retries is not None:
+            args.extend(["--otp-retries", str(otp_retries)])
+        if use_otp:
+            args.append("--use-otp")
+        if use_webauthn:
+            args.append("--use-webauthn")
+        if webauthn_pin:
+            args.extend(["--webauthn-pin", webauthn_pin])
+        if webauthn_device:
+            args.extend(["--webauthn-device", webauthn_device])
         if force:
             args.append("--force")
         if insecure:
@@ -199,6 +260,11 @@ class CERNSSOClient:
         user: str | None = None,
         otp: str | None = None,
         otp_command: str | None = None,
+        otp_retries: int | None = None,
+        use_otp: bool = False,
+        use_webauthn: bool = False,
+        webauthn_pin: str | None = None,
+        webauthn_device: str | None = None,
         insecure: bool = False,
         auth_host: str = "auth.cern.ch",
         realm: str = "cern",
@@ -211,6 +277,11 @@ class CERNSSOClient:
             user: Kerberos username.
             otp: OTP code for 2FA.
             otp_command: Command to get OTP.
+            otp_retries: Max OTP retry attempts.
+            use_otp: Force OTP method even if WebAuthn is default.
+            use_webauthn: Force WebAuthn method even if OTP is default.
+            webauthn_pin: PIN for FIDO2 security key.
+            webauthn_device: Path to specific FIDO2 device.
             insecure: Skip certificate validation.
             auth_host: Authentication hostname.
             realm: Authentication realm.
@@ -241,6 +312,16 @@ class CERNSSOClient:
             args.extend(["--otp", otp])
         if otp_command:
             args.extend(["--otp-command", otp_command])
+        if otp_retries is not None:
+            args.extend(["--otp-retries", str(otp_retries)])
+        if use_otp:
+            args.append("--use-otp")
+        if use_webauthn:
+            args.append("--use-webauthn")
+        if webauthn_pin:
+            args.extend(["--webauthn-pin", webauthn_pin])
+        if webauthn_device:
+            args.extend(["--webauthn-device", webauthn_device])
         if insecure:
             args.append("--insecure")
 

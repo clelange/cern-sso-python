@@ -4,11 +4,12 @@ Python wrapper for [cern-sso-cli](https://github.com/clelange/cern-sso-cli) - CE
 
 ## Installation
 
-```bash
-pip install cern-sso-python
-```
+1. **Install the CLI** (v0.21.0+): See [cern-sso-cli installation instructions](https://github.com/clelange/cern-sso-cli#installation)
 
-**Prerequisite**: You must have `cern-sso-cli` v0.21.0 or later installed and available in your PATH. Install from [cern-sso-cli releases](https://github.com/clelange/cern-sso-cli/releases).
+2. **Install the Python package**:
+   ```bash
+   pip install cern-sso-python
+   ```
 
 ## Quick Start
 
@@ -111,17 +112,70 @@ client = CERNSSOClient(
 jar = client.get_cookies("https://gitlab.cern.ch")
 ```
 
+### 2FA Options
+
+```python
+from cern_sso import get_cookies
+
+# Force OTP method (even if WebAuthn is default)
+jar = get_cookies("https://gitlab.cern.ch", use_otp=True)
+
+# Force WebAuthn with PIN
+jar = get_cookies("https://gitlab.cern.ch", use_webauthn=True, webauthn_pin="1234")
+
+# Specify user and OTP together
+jar = get_cookies("https://gitlab.cern.ch", user="alice", otp="123456")
+
+# Use 1Password CLI to get OTP
+jar = get_cookies("https://gitlab.cern.ch", otp_command="op item get CERN --otp")
+```
+
+| Parameter | Description |
+|-----------|-------------|
+| `user` | Kerberos username |
+| `otp` | 6-digit OTP code |
+| `otp_command` | Command to fetch OTP |
+| `otp_retries` | Max retry attempts |
+| `use_otp` | Force OTP method |
+| `use_webauthn` | Force WebAuthn method |
+| `webauthn_pin` | FIDO2 key PIN |
+| `webauthn_device` | Path to FIDO2 device |
+
 ## API Reference
 
-### Functions
+### `get_cookies(url, **kwargs) -> MozillaCookieJar`
 
-| Function | Description |
-|----------|-------------|
-| `get_cookies(url, ...)` | Authenticate and return cookies as `MozillaCookieJar` |
-| `get_token(client_id, redirect_uri, ...)` | Get OAuth2 token via Authorization Code flow |
-| `device_flow(client_id, ...)` | Get OAuth2 token via Device Authorization Grant |
-| `load_cookies(path)` | Load cookies from Netscape-format file |
-| `to_requests_jar(jar)` | Convert to requests-compatible cookie jar |
+Authenticate and return session cookies.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `url` | `str` | Target URL to authenticate against |
+| `file` | `str \| Path` | Save cookies to file (optional) |
+| `user` | `str` | Kerberos username |
+| `otp` | `str` | 6-digit OTP code |
+| `otp_command` | `str` | Command to fetch OTP |
+| `use_otp` | `bool` | Force OTP method |
+| `use_webauthn` | `bool` | Force WebAuthn (security key) method |
+| `webauthn_pin` | `str` | FIDO2 security key PIN |
+| `force` | `bool` | Force re-authentication |
+| `insecure` | `bool` | Skip certificate validation |
+
+### `get_token(client_id, redirect_uri, **kwargs) -> TokenResult`
+
+Get OAuth2 access token via Authorization Code flow. Accepts same authentication parameters as `get_cookies`.
+
+### `device_flow(client_id, **kwargs) -> TokenResult`
+
+Get OAuth2 tokens via Device Authorization Grant (for headless environments).
+
+### `CERNSSOClient(cli_path=None, quiet=True)`
+
+Low-level client for direct CLI invocation.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `cli_path` | `str` | Path to cern-sso-cli binary (auto-detect if None) |
+| `quiet` | `bool` | Suppress CLI progress output (default: True) |
 
 ### Exceptions
 
@@ -129,7 +183,7 @@ jar = client.get_cookies("https://gitlab.cern.ch")
 |-----------|-------------|
 | `CERNSSOError` | Base exception |
 | `CLINotFoundError` | cern-sso-cli not found in PATH |
-| `CLIVersionError` | CLI version too old |
+| `CLIVersionError` | CLI version too old (requires ≥0.21.0) |
 | `AuthenticationError` | Authentication failed |
 | `CookieError` | Cookie file operations failed |
 

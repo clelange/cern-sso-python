@@ -2,8 +2,6 @@
 
 from datetime import datetime, timezone
 
-import pytest
-
 from cern_sso.tokens import TokenResult
 
 

@@ -57,11 +57,11 @@ def to_requests_jar(jar: MozillaCookieJar):
     """
     try:
         from requests.cookies import RequestsCookieJar
-    except ImportError:
+    except ImportError as e:
         raise ImportError(
             "The 'requests' package is required for to_requests_jar(). "
             "Install it with: pip install requests"
-        )
+        ) from e
 
     req_jar = RequestsCookieJar()
     for cookie in jar:

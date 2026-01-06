@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from cern_sso.cookies import load_cookies, to_requests_jar
+from cern_sso.cookies import load_cookies
 from cern_sso.exceptions import CookieError
 
 
@@ -50,14 +50,17 @@ class TestToRequestsJar:
 
     def test_to_requests_jar_missing_requests(self, tmp_path: Path):
         """Test error when requests not installed."""
+        from cern_sso.cookies import to_requests_jar
+
         cookie_file = tmp_path / "cookies.txt"
         cookie_file.write_text("# Netscape HTTP Cookie File\n")
         jar = load_cookies(cookie_file)
 
         # Mock requests not being installed
         import sys
+
         with pytest.MonkeyPatch.context() as mp:
             mp.setitem(sys.modules, "requests", None)
             mp.setitem(sys.modules, "requests.cookies", None)
-            # The import will fail when we try to use it
-            # This test documents the expected behavior
+            with pytest.raises(ImportError, match="requests package is required"):
+                to_requests_jar(jar)

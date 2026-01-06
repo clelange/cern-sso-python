@@ -6,7 +6,6 @@ import subprocess
 import tempfile
 from http.cookiejar import MozillaCookieJar
 from pathlib import Path
-from typing import Any
 
 from .cookies import load_cookies
 from .exceptions import AuthenticationError, CLINotFoundError, CLIVersionError
@@ -86,7 +85,7 @@ class CERNSSOClient:
 
             self._version_checked = True
         except subprocess.CalledProcessError as e:
-            raise CLINotFoundError(f"Failed to get CLI version: {e.stderr}")
+            raise CLINotFoundError(f"Failed to get CLI version: {e.stderr}") from e
         except (ValueError, IndexError):
             # Can't parse version, assume it's fine
             self._version_checked = True
@@ -113,7 +112,6 @@ class CERNSSOClient:
 
         import os
         import signal
-        import threading
 
         # Always capture stdout (for JSON output parsing)
         # Let stderr go to terminal so user sees prompts and errors
@@ -330,7 +328,7 @@ class CERNSSOClient:
         try:
             data = json.loads(result.stdout.strip())
         except json.JSONDecodeError as e:
-            raise AuthenticationError(f"Failed to parse token response: {e}")
+            raise AuthenticationError(f"Failed to parse token response: {e}") from e
 
         return TokenResult(data)
 
@@ -387,7 +385,7 @@ class CERNSSOClient:
         try:
             data = json.loads(result.stdout.strip())
         except json.JSONDecodeError as e:
-            raise AuthenticationError(f"Failed to parse token response: {e}")
+            raise AuthenticationError(f"Failed to parse token response: {e}") from e
 
         return TokenResult(data)
 

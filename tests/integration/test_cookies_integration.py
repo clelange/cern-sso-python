@@ -2,7 +2,7 @@
 
 import pytest
 
-from cern_sso import get_cookies, CERNSSOClient
+from cern_sso import CERNSSOClient, get_cookies
 
 
 @pytest.mark.integration
@@ -28,7 +28,7 @@ class TestGetCookiesIntegration:
         """Test saving cookies to a file."""
         cookie_file = tmp_path / "cookies.txt"
 
-        jar = get_cookies(
+        get_cookies(
             "https://gitlab.cern.ch",
             file=str(cookie_file),
         )

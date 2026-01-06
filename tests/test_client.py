@@ -7,9 +7,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from cern_sso import CERNSSOClient, get_cookies, get_token, device_flow
+from cern_sso import CERNSSOClient
 from cern_sso.exceptions import (
-    AuthenticationError,
     CLINotFoundError,
     CLIVersionError,
 )

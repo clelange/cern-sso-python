@@ -4,7 +4,7 @@ Python wrapper for [cern-sso-cli](https://github.com/clelange/cern-sso-cli) - CE
 
 ## Installation
 
-1. **Install the CLI** (v0.21.0+): See [cern-sso-cli installation instructions](https://github.com/clelange/cern-sso-cli#installation)
+1. **Install the CLI** (v0.24.0+): See [cern-sso-cli installation instructions](https://github.com/clelange/cern-sso-cli#installation)
 
 2. **Install the Python package**:
    ```bash
@@ -141,6 +141,39 @@ jar = get_cookies("https://gitlab.cern.ch", otp_command="op item get CERN --otp"
 | `webauthn_pin` | FIDO2 key PIN |
 | `webauthn_device` | Path to FIDO2 device |
 
+### Keytab Authentication
+
+For automated environments, you can use Kerberos keytabs:
+
+```python
+from cern_sso import get_cookies
+import os
+
+# Using KRB5_KTNAME env var (recommended)
+os.environ["KRB5_KTNAME"] = "/path/to/keytab"
+jar = get_cookies("https://gitlab.cern.ch")
+
+# Explicit keytab file
+jar = get_cookies("https://gitlab.cern.ch", keytab="/path/to/keytab")
+
+# Force keytab authentication
+jar = get_cookies("https://gitlab.cern.ch", use_keytab=True)
+
+# Force credential cache
+jar = get_cookies("https://gitlab.cern.ch", use_ccache=True)
+
+# Custom Kerberos config
+jar = get_cookies("https://gitlab.cern.ch", krb5_config="/path/to/krb5.conf")
+```
+
+| Parameter | Description |
+|-----------|-------------|
+| `keytab` | Path to Kerberos keytab file |
+| `use_keytab` | Force keytab authentication |
+| `use_password` | Force password authentication |
+| `use_ccache` | Force credential cache authentication |
+| `krb5_config` | Kerberos config source ('embedded', 'system', or file path) |
+
 ## API Reference
 
 ### `get_cookies(url, **kwargs) -> MozillaCookieJar`
@@ -157,6 +190,11 @@ Authenticate and return session cookies.
 | `use_otp` | `bool` | Force OTP method |
 | `use_webauthn` | `bool` | Force WebAuthn (security key) method |
 | `webauthn_pin` | `str` | FIDO2 security key PIN |
+| `keytab` | `str` | Path to Kerberos keytab file |
+| `use_keytab` | `bool` | Force keytab authentication |
+| `use_password` | `bool` | Force password authentication |
+| `use_ccache` | `bool` | Force credential cache authentication |
+| `krb5_config` | `str` | Kerberos config source ('embedded', 'system', or file path) |
 | `force` | `bool` | Force re-authentication |
 | `insecure` | `bool` | Skip certificate validation |
 
@@ -183,14 +221,14 @@ Low-level client for direct CLI invocation.
 |-----------|-------------|
 | `CERNSSOError` | Base exception |
 | `CLINotFoundError` | cern-sso-cli not found in PATH |
-| `CLIVersionError` | CLI version too old (requires ≥0.21.0) |
+| `CLIVersionError` | CLI version too old (requires ≥0.24.0) |
 | `AuthenticationError` | Authentication failed |
 | `CookieError` | Cookie file operations failed |
 
 ## Requirements
 
 - Python 3.9+
-- [cern-sso-cli](https://github.com/clelange/cern-sso-cli) v0.21.0 or later
+- [cern-sso-cli](https://github.com/clelange/cern-sso-cli) v0.24.0 or later
 
 ## License
 

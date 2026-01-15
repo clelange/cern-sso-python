@@ -65,6 +65,11 @@ def get_cookies(
     use_webauthn: bool = False,
     webauthn_pin: Optional[str] = None,
     webauthn_device: Optional[str] = None,
+    keytab: Optional[str] = None,
+    use_keytab: bool = False,
+    use_password: bool = False,
+    use_ccache: bool = False,
+    krb5_config: Optional[str] = None,
     force: bool = False,
     insecure: bool = False,
     auth_host: str = "auth.cern.ch",
@@ -85,6 +90,11 @@ def get_cookies(
         use_webauthn: Force WebAuthn method even if OTP is default.
         webauthn_pin: PIN for FIDO2 security key.
         webauthn_device: Path to specific FIDO2 device.
+        keytab: Path to Kerberos keytab file.
+        use_keytab: Force keytab authentication.
+        use_password: Force password authentication.
+        use_ccache: Force credential cache authentication.
+        krb5_config: Kerberos config source ('embedded', 'system', or file path).
         force: Force re-authentication even if cookies exist.
         insecure: Skip certificate validation.
         auth_host: Authentication hostname.
@@ -112,6 +122,11 @@ def get_cookies(
         use_webauthn=use_webauthn,
         webauthn_pin=webauthn_pin,
         webauthn_device=webauthn_device,
+        keytab=keytab,
+        use_keytab=use_keytab,
+        use_password=use_password,
+        use_ccache=use_ccache,
+        krb5_config=krb5_config,
         force=force,
         insecure=insecure,
         auth_host=auth_host,
@@ -130,6 +145,11 @@ def get_token(
     use_webauthn: bool = False,
     webauthn_pin: Optional[str] = None,
     webauthn_device: Optional[str] = None,
+    keytab: Optional[str] = None,
+    use_keytab: bool = False,
+    use_password: bool = False,
+    use_ccache: bool = False,
+    krb5_config: Optional[str] = None,
     insecure: bool = False,
     auth_host: str = "auth.cern.ch",
     realm: str = "cern",
@@ -150,6 +170,11 @@ def get_token(
         use_webauthn: Force WebAuthn method even if OTP is default.
         webauthn_pin: PIN for FIDO2 security key.
         webauthn_device: Path to specific FIDO2 device.
+        keytab: Path to Kerberos keytab file.
+        use_keytab: Force keytab authentication.
+        use_password: Force password authentication.
+        use_ccache: Force credential cache authentication.
+        krb5_config: Kerberos config source ('embedded', 'system', or file path).
         insecure: Skip certificate validation.
         auth_host: Authentication hostname.
         realm: Authentication realm.
@@ -177,6 +202,11 @@ def get_token(
         use_webauthn=use_webauthn,
         webauthn_pin=webauthn_pin,
         webauthn_device=webauthn_device,
+        keytab=keytab,
+        use_keytab=use_keytab,
+        use_password=use_password,
+        use_ccache=use_ccache,
+        krb5_config=krb5_config,
         insecure=insecure,
         auth_host=auth_host,
         realm=realm,
@@ -186,6 +216,11 @@ def get_token(
 def device_flow(
     client_id: str,
     *,
+    keytab: Optional[str] = None,
+    use_keytab: bool = False,
+    use_password: bool = False,
+    use_ccache: bool = False,
+    krb5_config: Optional[str] = None,
     insecure: bool = False,
     auth_host: str = "auth.cern.ch",
     realm: str = "cern",
@@ -201,6 +236,11 @@ def device_flow(
 
     Args:
         client_id: OAuth client ID.
+        keytab: Path to Kerberos keytab file.
+        use_keytab: Force keytab authentication.
+        use_password: Force password authentication.
+        use_ccache: Force credential cache authentication.
+        krb5_config: Kerberos config source ('embedded', 'system', or file path).
         insecure: Skip certificate validation.
         auth_host: Authentication hostname.
         realm: Authentication realm.
@@ -222,6 +262,11 @@ def device_flow(
     """
     return _get_default_client().device_flow(
         client_id,
+        keytab=keytab,
+        use_keytab=use_keytab,
+        use_password=use_password,
+        use_ccache=use_ccache,
+        krb5_config=krb5_config,
         insecure=insecure,
         auth_host=auth_host,
         realm=realm,

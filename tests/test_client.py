@@ -76,8 +76,7 @@ class TestGetCookies:
         cookie_file = tmp_path / "cookies.txt"
         # Create a minimal Netscape cookie file
         cookie_file.write_text(
-            "# Netscape HTTP Cookie File\n"
-            ".example.com\tTRUE\t/\tFALSE\t0\tsession\tabc123\n"
+            "# Netscape HTTP Cookie File\n.example.com\tTRUE\t/\tFALSE\t0\tsession\tabc123\n"
         )
 
         def mock_run_cli(args, **kwargs):
@@ -119,6 +118,138 @@ class TestGetCookies:
         assert "123456" in cmd
         assert "--user" in cmd
         assert "testuser" in cmd
+
+    def test_get_cookies_with_keytab(self, tmp_path: Path):
+        """Test cookie retrieval with keytab."""
+        cookie_file = tmp_path / "cookies.txt"
+        cookie_file.write_text(
+            "# Netscape HTTP Cookie File\n"
+            ".gitlab.cern.ch\tTRUE\t/\tFALSE\t0\t_shibsession\tkeytab123\n"
+        )
+
+        commands_run = []
+
+        def mock_run_cli(args, **kwargs):
+            commands_run.append(args)
+            return subprocess.CompletedProcess(args, 0, "", "")
+
+        with patch("cern_sso.CERNSSOClient._run_cli", side_effect=mock_run_cli):
+            with patch("shutil.which", return_value="/usr/bin/cern-sso-cli"):
+                client = CERNSSOClient(verify_version=False)
+                client.get_cookies(
+                    "https://gitlab.cern.ch",
+                    file=str(cookie_file),
+                    keytab="/path/to/keytab",
+                )
+
+        cmd = commands_run[-1]
+        assert "--keytab" in cmd
+        assert "/path/to/keytab" in cmd
+
+    def test_get_cookies_with_use_keytab(self, tmp_path: Path):
+        """Test cookie retrieval with use_keytab flag."""
+        cookie_file = tmp_path / "cookies.txt"
+        cookie_file.write_text(
+            "# Netscape HTTP Cookie File\n"
+            ".gitlab.cern.ch\tTRUE\t/\tFALSE\t0\t_shibsession\tkeytab123\n"
+        )
+
+        commands_run = []
+
+        def mock_run_cli(args, **kwargs):
+            commands_run.append(args)
+            return subprocess.CompletedProcess(args, 0, "", "")
+
+        with patch("cern_sso.CERNSSOClient._run_cli", side_effect=mock_run_cli):
+            with patch("shutil.which", return_value="/usr/bin/cern-sso-cli"):
+                client = CERNSSOClient(verify_version=False)
+                client.get_cookies(
+                    "https://gitlab.cern.ch",
+                    file=str(cookie_file),
+                    use_keytab=True,
+                )
+
+        cmd = commands_run[-1]
+        assert "--use-keytab" in cmd
+
+    def test_get_cookies_with_use_password(self, tmp_path: Path):
+        """Test cookie retrieval with use_password flag."""
+        cookie_file = tmp_path / "cookies.txt"
+        cookie_file.write_text(
+            "# Netscape HTTP Cookie File\n"
+            ".gitlab.cern.ch\tTRUE\t/\tFALSE\t0\t_shibsession\tpass123\n"
+        )
+
+        commands_run = []
+
+        def mock_run_cli(args, **kwargs):
+            commands_run.append(args)
+            return subprocess.CompletedProcess(args, 0, "", "")
+
+        with patch("cern_sso.CERNSSOClient._run_cli", side_effect=mock_run_cli):
+            with patch("shutil.which", return_value="/usr/bin/cern-sso-cli"):
+                client = CERNSSOClient(verify_version=False)
+                client.get_cookies(
+                    "https://gitlab.cern.ch",
+                    file=str(cookie_file),
+                    use_password=True,
+                )
+
+        cmd = commands_run[-1]
+        assert "--use-password" in cmd
+
+    def test_get_cookies_with_use_ccache(self, tmp_path: Path):
+        """Test cookie retrieval with use_ccache flag."""
+        cookie_file = tmp_path / "cookies.txt"
+        cookie_file.write_text(
+            "# Netscape HTTP Cookie File\n"
+            ".gitlab.cern.ch\tTRUE\t/\tFALSE\t0\t_shibsession\tccache123\n"
+        )
+
+        commands_run = []
+
+        def mock_run_cli(args, **kwargs):
+            commands_run.append(args)
+            return subprocess.CompletedProcess(args, 0, "", "")
+
+        with patch("cern_sso.CERNSSOClient._run_cli", side_effect=mock_run_cli):
+            with patch("shutil.which", return_value="/usr/bin/cern-sso-cli"):
+                client = CERNSSOClient(verify_version=False)
+                client.get_cookies(
+                    "https://gitlab.cern.ch",
+                    file=str(cookie_file),
+                    use_ccache=True,
+                )
+
+        cmd = commands_run[-1]
+        assert "--use-ccache" in cmd
+
+    def test_get_cookies_with_krb5_config(self, tmp_path: Path):
+        """Test cookie retrieval with krb5_config parameter."""
+        cookie_file = tmp_path / "cookies.txt"
+        cookie_file.write_text(
+            "# Netscape HTTP Cookie File\n"
+            ".gitlab.cern.ch\tTRUE\t/\tFALSE\t0\t_shibsession\tkrb5123\n"
+        )
+
+        commands_run = []
+
+        def mock_run_cli(args, **kwargs):
+            commands_run.append(args)
+            return subprocess.CompletedProcess(args, 0, "", "")
+
+        with patch("cern_sso.CERNSSOClient._run_cli", side_effect=mock_run_cli):
+            with patch("shutil.which", return_value="/usr/bin/cern-sso-cli"):
+                client = CERNSSOClient(verify_version=False)
+                client.get_cookies(
+                    "https://gitlab.cern.ch",
+                    file=str(cookie_file),
+                    krb5_config="/path/to/krb5.conf",
+                )
+
+        cmd = commands_run[-1]
+        assert "--krb5-config" in cmd
+        assert "/path/to/krb5.conf" in cmd
 
 
 class TestGetToken:
@@ -163,6 +294,28 @@ class TestGetToken:
                 assert token.expires_at is not None
                 assert not token.is_expired
 
+    def test_get_token_with_keytab(self):
+        """Test token retrieval with keytab parameter."""
+        token_response = {
+            "access_token": "eyJ...",
+            "token_type": "Bearer",
+        }
+
+        commands_run = []
+
+        def mock_run_cli(args, **kwargs):
+            commands_run.append(args)
+            return subprocess.CompletedProcess(args, 0, json.dumps(token_response), "")
+
+        with patch("cern_sso.CERNSSOClient._run_cli", side_effect=mock_run_cli):
+            with patch("shutil.which", return_value="/usr/bin/cern-sso-cli"):
+                client = CERNSSOClient(verify_version=False)
+                client.get_token("my-client", "https://redirect", keytab="/path/to/keytab")
+
+        cmd = commands_run[-1]
+        assert "--keytab" in cmd
+        assert "/path/to/keytab" in cmd
+
 
 class TestDeviceFlow:
     """Tests for device_flow function."""
@@ -193,7 +346,9 @@ class TestDeviceFlow:
 
         def mock_run_cli(args, **kwargs):
             commands_run.append(args)
-            return subprocess.CompletedProcess(args, 0, '{"access_token": "test", "token_type": "Bearer"}', "")
+            return subprocess.CompletedProcess(
+                args, 0, '{"access_token": "test", "token_type": "Bearer"}', ""
+            )
 
         with patch("cern_sso.CERNSSOClient._run_cli", side_effect=mock_run_cli):
             with patch("shutil.which", return_value="/usr/bin/cern-sso-cli"):
@@ -203,6 +358,28 @@ class TestDeviceFlow:
         # Device flow should not include --quiet
         cmd = commands_run[-1]
         assert "--quiet" not in cmd
+
+    def test_device_flow_with_keytab(self):
+        """Test device flow with keytab parameter."""
+        token_response = {
+            "access_token": "eyJ...",
+            "token_type": "Bearer",
+        }
+
+        commands_run = []
+
+        def mock_run_cli(args, **kwargs):
+            commands_run.append(args)
+            return subprocess.CompletedProcess(args, 0, json.dumps(token_response), "")
+
+        with patch("cern_sso.CERNSSOClient._run_cli", side_effect=mock_run_cli):
+            with patch("shutil.which", return_value="/usr/bin/cern-sso-cli"):
+                client = CERNSSOClient(verify_version=False)
+                client.device_flow("my-client", keytab="/path/to/keytab")
+
+        cmd = commands_run[-1]
+        assert "--keytab" in cmd
+        assert "/path/to/keytab" in cmd
 
 
 class TestTokenResult:

@@ -12,8 +12,8 @@ from .cookies import load_cookies
 from .exceptions import AuthenticationError, CLINotFoundError, CLIVersionError
 from .tokens import TokenResult
 
-# Minimum CLI version required for JSON output
-MIN_CLI_VERSION = "0.21.0"
+# Minimum CLI version required for keytab support
+MIN_CLI_VERSION = "0.24.0"
 
 
 class CERNSSOClient:
@@ -176,6 +176,11 @@ class CERNSSOClient:
         use_webauthn: bool = False,
         webauthn_pin: Optional[str] = None,
         webauthn_device: Optional[str] = None,
+        keytab: Optional[str] = None,
+        use_keytab: bool = False,
+        use_password: bool = False,
+        use_ccache: bool = False,
+        krb5_config: Optional[str] = None,
         force: bool = False,
         insecure: bool = False,
         auth_host: str = "auth.cern.ch",
@@ -193,6 +198,11 @@ class CERNSSOClient:
             use_webauthn: Force WebAuthn method even if OTP is default.
             webauthn_pin: PIN for FIDO2 security key.
             webauthn_device: Path to specific FIDO2 device.
+            keytab: Path to Kerberos keytab file.
+            use_keytab: Force keytab authentication.
+            use_password: Force password authentication.
+            use_ccache: Force credential cache authentication.
+            krb5_config: Kerberos config source ('embedded', 'system', or file path).
             force: Force re-authentication even if cookies exist.
             insecure: Skip certificate validation.
             auth_host: Authentication hostname.
@@ -213,6 +223,7 @@ class CERNSSOClient:
         if use_temp:
             fd, file = tempfile.mkstemp(suffix=".txt", prefix="cern_sso_cookies_")
             import os
+
             os.close(fd)
 
         file = Path(file)
@@ -235,6 +246,16 @@ class CERNSSOClient:
             args.extend(["--webauthn-pin", webauthn_pin])
         if webauthn_device:
             args.extend(["--webauthn-device", webauthn_device])
+        if keytab:
+            args.extend(["--keytab", keytab])
+        if use_keytab:
+            args.append("--use-keytab")
+        if use_password:
+            args.append("--use-password")
+        if use_ccache:
+            args.append("--use-ccache")
+        if krb5_config:
+            args.extend(["--krb5-config", krb5_config])
         if force:
             args.append("--force")
         if insecure:
@@ -264,6 +285,11 @@ class CERNSSOClient:
         use_webauthn: bool = False,
         webauthn_pin: Optional[str] = None,
         webauthn_device: Optional[str] = None,
+        keytab: Optional[str] = None,
+        use_keytab: bool = False,
+        use_password: bool = False,
+        use_ccache: bool = False,
+        krb5_config: Optional[str] = None,
         insecure: bool = False,
         auth_host: str = "auth.cern.ch",
         realm: str = "cern",
@@ -281,6 +307,11 @@ class CERNSSOClient:
             use_webauthn: Force WebAuthn method even if OTP is default.
             webauthn_pin: PIN for FIDO2 security key.
             webauthn_device: Path to specific FIDO2 device.
+            keytab: Path to Kerberos keytab file.
+            use_keytab: Force keytab authentication.
+            use_password: Force password authentication.
+            use_ccache: Force credential cache authentication.
+            krb5_config: Kerberos config source ('embedded', 'system', or file path).
             insecure: Skip certificate validation.
             auth_host: Authentication hostname.
             realm: Authentication realm.
@@ -298,10 +329,14 @@ class CERNSSOClient:
         """
         args = [
             "token",
-            "--client-id", client_id,
-            "--url", redirect_uri,
-            "--auth-host", auth_host,
-            "--realm", realm,
+            "--client-id",
+            client_id,
+            "--url",
+            redirect_uri,
+            "--auth-host",
+            auth_host,
+            "--realm",
+            realm,
             "--json",
         ]
 
@@ -321,6 +356,16 @@ class CERNSSOClient:
             args.extend(["--webauthn-pin", webauthn_pin])
         if webauthn_device:
             args.extend(["--webauthn-device", webauthn_device])
+        if keytab:
+            args.extend(["--keytab", keytab])
+        if use_keytab:
+            args.append("--use-keytab")
+        if use_password:
+            args.append("--use-password")
+        if use_ccache:
+            args.append("--use-ccache")
+        if krb5_config:
+            args.extend(["--krb5-config", krb5_config])
         if insecure:
             args.append("--insecure")
 
@@ -337,6 +382,11 @@ class CERNSSOClient:
         self,
         client_id: str,
         *,
+        keytab: Optional[str] = None,
+        use_keytab: bool = False,
+        use_password: bool = False,
+        use_ccache: bool = False,
+        krb5_config: Optional[str] = None,
         insecure: bool = False,
         auth_host: str = "auth.cern.ch",
         realm: str = "cern",
@@ -348,6 +398,11 @@ class CERNSSOClient:
 
         Args:
             client_id: OAuth client ID.
+            keytab: Path to Kerberos keytab file.
+            use_keytab: Force keytab authentication.
+            use_password: Force password authentication.
+            use_ccache: Force credential cache authentication.
+            krb5_config: Kerberos config source ('embedded', 'system', or file path).
             insecure: Skip certificate validation.
             auth_host: Authentication hostname.
             realm: Authentication realm.
@@ -366,12 +421,25 @@ class CERNSSOClient:
         """
         args = [
             "device",
-            "--client-id", client_id,
-            "--auth-host", auth_host,
-            "--realm", realm,
+            "--client-id",
+            client_id,
+            "--auth-host",
+            auth_host,
+            "--realm",
+            realm,
             "--json",
         ]
 
+        if keytab:
+            args.extend(["--keytab", keytab])
+        if use_keytab:
+            args.append("--use-keytab")
+        if use_password:
+            args.append("--use-password")
+        if use_ccache:
+            args.append("--use-ccache")
+        if krb5_config:
+            args.extend(["--krb5-config", krb5_config])
         if insecure:
             args.append("--insecure")
 

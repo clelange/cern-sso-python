@@ -4,7 +4,7 @@ Python wrapper for [cern-sso-cli](https://github.com/clelange/cern-sso-cli) - CE
 
 ## Installation
 
-1. **Install the CLI** (v0.24.0+): See [cern-sso-cli installation instructions](https://github.com/clelange/cern-sso-cli#installation)
+1. **Install the CLI** (v0.25.0+): See [cern-sso-cli installation instructions](https://github.com/clelange/cern-sso-cli#installation)
 
 2. **Install the Python package**:
    ```bash
@@ -140,6 +140,60 @@ jar = get_cookies("https://gitlab.cern.ch", otp_command="op item get CERN --otp"
 | `use_webauthn` | Force WebAuthn method |
 | `webauthn_pin` | FIDO2 key PIN |
 | `webauthn_device` | Path to FIDO2 device |
+| `webauthn_device_index` | Index of FIDO2 device (from `list_webauthn_devices`) |
+| `webauthn_timeout` | Timeout in seconds for FIDO2 interaction |
+| `browser` | Use browser for authentication (Touch ID, etc.) |
+
+### Browser Authentication
+
+Use browser-based authentication for Touch ID, iCloud Keychain passkeys, or any other browser-supported 2FA:
+
+```python
+from cern_sso import get_cookies
+
+# Opens Chrome for authentication (supports Touch ID on macOS)
+jar = get_cookies("https://gitlab.cern.ch", browser=True)
+```
+
+**Requirements**: Google Chrome must be installed.
+
+### WebAuthn Device Selection
+
+List and select specific FIDO2 devices:
+
+```python
+from cern_sso import list_webauthn_devices, get_cookies
+
+# List available FIDO2 devices
+devices = list_webauthn_devices()
+for d in devices:
+    print(f"{d.index}: {d.product} at {d.path}")
+
+# Use a specific device by index
+jar = get_cookies("https://gitlab.cern.ch", webauthn_device_index=0)
+
+# Set a custom timeout for device interaction
+jar = get_cookies("https://gitlab.cern.ch", webauthn_timeout=60)
+```
+
+**Note**: This only lists USB/NFC security keys. macOS Touch ID and iCloud Keychain passkeys are not detected by libfido2 — use `browser=True` for those.
+
+### Cookie Status Check
+
+Check if cookies are still valid:
+
+```python
+from cern_sso import check_status
+
+# Check cookie expiration times
+status = check_status("cookies.txt")
+print(f"Has valid cookies: {status.has_valid_cookies}")
+print(f"All cookies valid: {status.all_valid}")
+
+# Verify cookies against a server (makes HTTP request)
+status = check_status("cookies.txt", url="https://gitlab.cern.ch")
+print(f"Server verified: {status.verified_valid}")
+```
 
 ### Keytab Authentication
 
@@ -190,6 +244,9 @@ Authenticate and return session cookies.
 | `use_otp` | `bool` | Force OTP method |
 | `use_webauthn` | `bool` | Force WebAuthn (security key) method |
 | `webauthn_pin` | `str` | FIDO2 security key PIN |
+| `webauthn_device_index` | `int` | Index of FIDO2 device (from `list_webauthn_devices`) |
+| `webauthn_timeout` | `int` | Timeout in seconds for FIDO2 interaction |
+| `browser` | `bool` | Use browser for authentication (Touch ID, etc.) |
 | `keytab` | `str` | Path to Kerberos keytab file |
 | `use_keytab` | `bool` | Force keytab authentication |
 | `use_password` | `bool` | Force password authentication |
@@ -206,6 +263,23 @@ Get OAuth2 access token via Authorization Code flow. Accepts same authentication
 
 Get OAuth2 tokens via Device Authorization Grant (for headless environments).
 
+### `list_webauthn_devices() -> list[WebAuthnDevice]`
+
+List available FIDO2/WebAuthn devices. Returns a list of `WebAuthnDevice` objects with `index`, `product`, and `path` attributes.
+
+### `check_status(file, **kwargs) -> CookieStatus`
+
+Check cookie expiration status.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `file` | `str \| Path` | Path to cookie file to check |
+| `url` | `str` | URL to verify cookies against (makes HTTP request) |
+| `insecure` | `bool` | Skip certificate validation when verifying |
+| `auth_host` | `str` | Authentication hostname for verification |
+
+Returns a `CookieStatus` object with `entries`, `verified`, `verified_valid`, `has_valid_cookies`, and `all_valid` attributes.
+
 ### `CERNSSOClient(cli_path=None, quiet=True)`
 
 Low-level client for direct CLI invocation.
@@ -221,15 +295,16 @@ Low-level client for direct CLI invocation.
 |-----------|-------------|
 | `CERNSSOError` | Base exception |
 | `CLINotFoundError` | cern-sso-cli not found in PATH |
-| `CLIVersionError` | CLI version too old (requires ≥0.24.0) |
+| `CLIVersionError` | CLI version too old (requires ≥0.25.0) |
 | `AuthenticationError` | Authentication failed |
 | `CookieError` | Cookie file operations failed |
 
 ## Requirements
 
 - Python 3.9+
-- [cern-sso-cli](https://github.com/clelange/cern-sso-cli) v0.24.0 or later
+- [cern-sso-cli](https://github.com/clelange/cern-sso-cli) v0.25.0 or later
 
 ## License
 
 GPL-3.0 - see [LICENSE](LICENSE)
+

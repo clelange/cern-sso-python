@@ -60,7 +60,6 @@ class TokenResult(dict):
             return None
         return self._fetched_at + timedelta(seconds=self.expires_in)
 
-
     @property
     def is_expired(self) -> bool:
         """Check if token has expired."""

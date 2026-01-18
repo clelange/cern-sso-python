@@ -10,20 +10,24 @@ class TestTokenResult:
 
     def test_basic_creation(self):
         """Test basic token creation."""
-        token = TokenResult({
-            "access_token": "eyJ...",
-            "token_type": "Bearer",
-        })
+        token = TokenResult(
+            {
+                "access_token": "eyJ...",
+                "token_type": "Bearer",
+            }
+        )
         assert token.access_token == "eyJ..."
         assert token.token_type == "Bearer"
 
     def test_dict_compatibility(self):
         """Test token is dict-compatible."""
-        token = TokenResult({
-            "access_token": "abc",
-            "token_type": "Bearer",
-            "custom_field": "value",
-        })
+        token = TokenResult(
+            {
+                "access_token": "abc",
+                "token_type": "Bearer",
+                "custom_field": "value",
+            }
+        )
 
         # Dict access
         assert token["access_token"] == "abc"
@@ -61,10 +65,12 @@ class TestTokenResult:
     def test_is_expired_false(self):
         """Test is_expired returns False for valid token."""
         # Token that expires in 1 hour
-        token = TokenResult({
-            "access_token": "abc",
-            "expires_in": 3600,
-        })
+        token = TokenResult(
+            {
+                "access_token": "abc",
+                "expires_in": 3600,
+            }
+        )
         assert not token.is_expired
 
     def test_is_expired_true(self):
@@ -84,9 +90,11 @@ class TestTokenResult:
 
     def test_repr(self):
         """Test string representation."""
-        token = TokenResult({
-            "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.test",
-        })
+        token = TokenResult(
+            {
+                "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.test",
+            }
+        )
         repr_str = repr(token)
         assert "TokenResult" in repr_str
         assert "access_token=" in repr_str
@@ -94,10 +102,12 @@ class TestTokenResult:
 
     def test_with_refresh_token(self):
         """Test token with refresh token."""
-        token = TokenResult({
-            "access_token": "abc",
-            "refresh_token": "xyz",
-            "scope": "openid profile",
-        })
+        token = TokenResult(
+            {
+                "access_token": "abc",
+                "refresh_token": "xyz",
+                "scope": "openid profile",
+            }
+        )
         assert token.refresh_token == "xyz"
         assert token.scope == "openid profile"

@@ -16,8 +16,7 @@ class TestLoadCookies:
         cookie_file = tmp_path / "cookies.txt"
         # Netscape format: domain, domain_specified, path, secure, expires, name, value
         cookie_file.write_text(
-            "# Netscape HTTP Cookie File\n"
-            ".example.com\tTRUE\t/\tFALSE\t0\tsession_id\tabc123\n"
+            "# Netscape HTTP Cookie File\n.example.com\tTRUE\t/\tFALSE\t0\tsession_id\tabc123\n"
         )
 
         jar = load_cookies(cookie_file)

@@ -416,3 +416,231 @@ class TestTokenResult:
 
         expected = datetime(2024, 1, 1, 13, 0, 0, tzinfo=timezone.utc)
         assert token.expires_at == expected
+
+
+class TestNewParameters:
+    """Tests for new CLI parameters."""
+
+    def test_get_cookies_with_browser(self, tmp_path: Path):
+        """Test cookie retrieval with browser flag."""
+        cookie_file = tmp_path / "cookies.txt"
+        cookie_file.write_text(
+            "# Netscape HTTP Cookie File\n"
+            ".gitlab.cern.ch\tTRUE\t/\tFALSE\t0\t_shibsession\tbrowser123\n"
+        )
+
+        commands_run = []
+
+        def mock_run_cli(args, **kwargs):
+            commands_run.append(args)
+            return subprocess.CompletedProcess(args, 0, "", "")
+
+        with patch("cern_sso.CERNSSOClient._run_cli", side_effect=mock_run_cli):
+            with patch("shutil.which", return_value="/usr/bin/cern-sso-cli"):
+                client = CERNSSOClient(verify_version=False)
+                client.get_cookies(
+                    "https://gitlab.cern.ch",
+                    file=str(cookie_file),
+                    browser=True,
+                )
+
+        cmd = commands_run[-1]
+        assert "--browser" in cmd
+
+    def test_get_cookies_with_webauthn_device_index(self, tmp_path: Path):
+        """Test cookie retrieval with webauthn_device_index."""
+        cookie_file = tmp_path / "cookies.txt"
+        cookie_file.write_text(
+            "# Netscape HTTP Cookie File\n"
+            ".gitlab.cern.ch\tTRUE\t/\tFALSE\t0\t_shibsession\tdevice123\n"
+        )
+
+        commands_run = []
+
+        def mock_run_cli(args, **kwargs):
+            commands_run.append(args)
+            return subprocess.CompletedProcess(args, 0, "", "")
+
+        with patch("cern_sso.CERNSSOClient._run_cli", side_effect=mock_run_cli):
+            with patch("shutil.which", return_value="/usr/bin/cern-sso-cli"):
+                client = CERNSSOClient(verify_version=False)
+                client.get_cookies(
+                    "https://gitlab.cern.ch",
+                    file=str(cookie_file),
+                    webauthn_device_index=0,
+                )
+
+        cmd = commands_run[-1]
+        assert "--webauthn-device-index" in cmd
+        assert "0" in cmd
+
+    def test_get_cookies_with_webauthn_timeout(self, tmp_path: Path):
+        """Test cookie retrieval with webauthn_timeout."""
+        cookie_file = tmp_path / "cookies.txt"
+        cookie_file.write_text(
+            "# Netscape HTTP Cookie File\n"
+            ".gitlab.cern.ch\tTRUE\t/\tFALSE\t0\t_shibsession\ttimeout123\n"
+        )
+
+        commands_run = []
+
+        def mock_run_cli(args, **kwargs):
+            commands_run.append(args)
+            return subprocess.CompletedProcess(args, 0, "", "")
+
+        with patch("cern_sso.CERNSSOClient._run_cli", side_effect=mock_run_cli):
+            with patch("shutil.which", return_value="/usr/bin/cern-sso-cli"):
+                client = CERNSSOClient(verify_version=False)
+                client.get_cookies(
+                    "https://gitlab.cern.ch",
+                    file=str(cookie_file),
+                    webauthn_timeout=60,
+                )
+
+        cmd = commands_run[-1]
+        assert "--webauthn-timeout" in cmd
+        assert "60" in cmd
+
+    def test_get_token_with_browser(self):
+        """Test token retrieval with browser flag."""
+        token_response = {
+            "access_token": "eyJ...",
+            "token_type": "Bearer",
+        }
+
+        commands_run = []
+
+        def mock_run_cli(args, **kwargs):
+            commands_run.append(args)
+            return subprocess.CompletedProcess(args, 0, json.dumps(token_response), "")
+
+        with patch("cern_sso.CERNSSOClient._run_cli", side_effect=mock_run_cli):
+            with patch("shutil.which", return_value="/usr/bin/cern-sso-cli"):
+                client = CERNSSOClient(verify_version=False)
+                client.get_token("my-client", "https://redirect", browser=True)
+
+        cmd = commands_run[-1]
+        assert "--browser" in cmd
+
+
+class TestListWebAuthnDevices:
+    """Tests for list_webauthn_devices function."""
+
+    def test_list_devices_empty(self):
+        """Test listing devices when none are found."""
+
+        def mock_run_cli(args, **kwargs):
+            # Simulate no devices output
+            return subprocess.CompletedProcess(args, 0, "", "")
+
+        with patch("cern_sso.CERNSSOClient._run_cli", side_effect=mock_run_cli):
+            with patch("shutil.which", return_value="/usr/bin/cern-sso-cli"):
+                client = CERNSSOClient(verify_version=False)
+                devices = client.list_webauthn_devices()
+
+        assert devices == []
+
+    def test_list_devices_with_devices(self):
+        """Test listing devices when devices are found."""
+        output = "INDEX  PRODUCT  PATH\n0  YubiKey  /dev/usb1\n1  SoloKey  /dev/usb2\n"
+
+        def mock_run_cli(args, **kwargs):
+            return subprocess.CompletedProcess(args, 0, output, "")
+
+        with patch("cern_sso.CERNSSOClient._run_cli", side_effect=mock_run_cli):
+            with patch("shutil.which", return_value="/usr/bin/cern-sso-cli"):
+                client = CERNSSOClient(verify_version=False)
+                devices = client.list_webauthn_devices()
+
+        assert len(devices) == 2
+        assert devices[0].index == 0
+        assert devices[0].product == "YubiKey"
+        assert devices[0].path == "/dev/usb1"
+        assert devices[1].index == 1
+        assert devices[1].product == "SoloKey"
+
+
+class TestCheckStatus:
+    """Tests for check_status function."""
+
+    def test_check_status_basic(self, tmp_path: Path):
+        """Test basic status check."""
+        commands_run = []
+
+        def mock_run_cli(args, **kwargs):
+            commands_run.append(args)
+            return subprocess.CompletedProcess(args, 0, "[]", "")
+
+        with patch("cern_sso.CERNSSOClient._run_cli", side_effect=mock_run_cli):
+            with patch("shutil.which", return_value="/usr/bin/cern-sso-cli"):
+                client = CERNSSOClient(verify_version=False)
+                status = client.check_status("cookies.txt")
+
+        cmd = commands_run[-1]
+        assert "status" in cmd
+        assert "--json" in cmd
+        assert status.verified is False
+        assert status.entries == []
+
+    def test_check_status_with_url(self, tmp_path: Path):
+        """Test status check with URL verification."""
+        commands_run = []
+
+        def mock_run_cli(args, **kwargs):
+            commands_run.append(args)
+            return subprocess.CompletedProcess(args, 0, "[]", "")
+
+        with patch("cern_sso.CERNSSOClient._run_cli", side_effect=mock_run_cli):
+            with patch("shutil.which", return_value="/usr/bin/cern-sso-cli"):
+                client = CERNSSOClient(verify_version=False)
+                status = client.check_status("cookies.txt", url="https://gitlab.cern.ch")
+
+        cmd = commands_run[-1]
+        assert "--url" in cmd
+        assert "https://gitlab.cern.ch" in cmd
+        assert status.verified is True
+
+
+class TestModels:
+    """Tests for new model classes."""
+
+    def test_webauthn_device(self):
+        """Test WebAuthnDevice dataclass."""
+        from cern_sso.models import WebAuthnDevice
+
+        device = WebAuthnDevice(index=0, product="YubiKey 5", path="/dev/usb1")
+        assert device.index == 0
+        assert device.product == "YubiKey 5"
+        assert device.path == "/dev/usb1"
+
+    def test_cookie_status_has_valid_cookies(self):
+        """Test CookieStatus has_valid_cookies property."""
+        from datetime import datetime, timezone
+
+        from cern_sso.models import CookieStatus, CookieStatusEntry
+
+        future = datetime.now(timezone.utc).replace(year=2099)
+        entries = [
+            CookieStatusEntry(domain=".example.com", name="session", expires=future, valid=True),
+            CookieStatusEntry(domain=".example.com", name="old", expires=None, valid=False),
+        ]
+        status = CookieStatus(entries=entries, verified=False, verified_valid=False)
+
+        assert status.has_valid_cookies is True
+        assert status.all_valid is False
+
+    def test_cookie_status_all_valid(self):
+        """Test CookieStatus all_valid property."""
+        from datetime import datetime, timezone
+
+        from cern_sso.models import CookieStatus, CookieStatusEntry
+
+        future = datetime.now(timezone.utc).replace(year=2099)
+        entries = [
+            CookieStatusEntry(domain=".example.com", name="session", expires=future, valid=True),
+            CookieStatusEntry(domain=".example.com", name="other", expires=future, valid=True),
+        ]
+        status = CookieStatus(entries=entries, verified=False, verified_valid=False)
+
+        assert status.has_valid_cookies is True
+        assert status.all_valid is True

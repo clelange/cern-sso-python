@@ -1,6 +1,5 @@
 """Custom exceptions for cern-sso-python."""
 
-
 from typing import Optional
 
 
@@ -26,9 +25,7 @@ class CLIVersionError(CERNSSOError):
     def __init__(self, required: str, found: str):
         self.required = required
         self.found = found
-        super().__init__(
-            f"cern-sso-cli version {required} or higher required, found {found}"
-        )
+        super().__init__(f"cern-sso-cli version {required} or higher required, found {found}")
 
 
 class AuthenticationError(CERNSSOError):
@@ -37,7 +34,6 @@ class AuthenticationError(CERNSSOError):
     def __init__(self, message: str, stderr: Optional[str] = None):
         self.stderr = stderr
         super().__init__(message)
-
 
 
 class CookieError(CERNSSOError):

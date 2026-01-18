@@ -10,10 +10,11 @@ from typing import Optional, Union
 
 from .cookies import load_cookies
 from .exceptions import AuthenticationError, CLINotFoundError, CLIVersionError
+from .models import CookieStatus, CookieStatusEntry, WebAuthnDevice
 from .tokens import TokenResult
 
-# Minimum CLI version required for keytab support
-MIN_CLI_VERSION = "0.24.0"
+# Minimum CLI version required (0.25.0 adds webauthn device index)
+MIN_CLI_VERSION = "0.25.0"
 
 
 class CERNSSOClient:
@@ -176,6 +177,9 @@ class CERNSSOClient:
         use_webauthn: bool = False,
         webauthn_pin: Optional[str] = None,
         webauthn_device: Optional[str] = None,
+        webauthn_device_index: Optional[int] = None,
+        webauthn_timeout: Optional[int] = None,
+        browser: bool = False,
         keytab: Optional[str] = None,
         use_keytab: bool = False,
         use_password: bool = False,
@@ -198,6 +202,9 @@ class CERNSSOClient:
             use_webauthn: Force WebAuthn method even if OTP is default.
             webauthn_pin: PIN for FIDO2 security key.
             webauthn_device: Path to specific FIDO2 device.
+            webauthn_device_index: Index of FIDO2 device (from list_webauthn_devices).
+            webauthn_timeout: Timeout in seconds for FIDO2 device interaction.
+            browser: Use browser for authentication (supports Touch ID, etc.).
             keytab: Path to Kerberos keytab file.
             use_keytab: Force keytab authentication.
             use_password: Force password authentication.
@@ -246,6 +253,12 @@ class CERNSSOClient:
             args.extend(["--webauthn-pin", webauthn_pin])
         if webauthn_device:
             args.extend(["--webauthn-device", webauthn_device])
+        if webauthn_device_index is not None:
+            args.extend(["--webauthn-device-index", str(webauthn_device_index)])
+        if webauthn_timeout is not None:
+            args.extend(["--webauthn-timeout", str(webauthn_timeout)])
+        if browser:
+            args.append("--browser")
         if keytab:
             args.extend(["--keytab", keytab])
         if use_keytab:
@@ -285,6 +298,9 @@ class CERNSSOClient:
         use_webauthn: bool = False,
         webauthn_pin: Optional[str] = None,
         webauthn_device: Optional[str] = None,
+        webauthn_device_index: Optional[int] = None,
+        webauthn_timeout: Optional[int] = None,
+        browser: bool = False,
         keytab: Optional[str] = None,
         use_keytab: bool = False,
         use_password: bool = False,
@@ -307,6 +323,9 @@ class CERNSSOClient:
             use_webauthn: Force WebAuthn method even if OTP is default.
             webauthn_pin: PIN for FIDO2 security key.
             webauthn_device: Path to specific FIDO2 device.
+            webauthn_device_index: Index of FIDO2 device (from list_webauthn_devices).
+            webauthn_timeout: Timeout in seconds for FIDO2 device interaction.
+            browser: Use browser for authentication (supports Touch ID, etc.).
             keytab: Path to Kerberos keytab file.
             use_keytab: Force keytab authentication.
             use_password: Force password authentication.
@@ -356,6 +375,12 @@ class CERNSSOClient:
             args.extend(["--webauthn-pin", webauthn_pin])
         if webauthn_device:
             args.extend(["--webauthn-device", webauthn_device])
+        if webauthn_device_index is not None:
+            args.extend(["--webauthn-device-index", str(webauthn_device_index)])
+        if webauthn_timeout is not None:
+            args.extend(["--webauthn-timeout", str(webauthn_timeout)])
+        if browser:
+            args.append("--browser")
         if keytab:
             args.extend(["--keytab", keytab])
         if use_keytab:
@@ -457,6 +482,130 @@ class CERNSSOClient:
             raise AuthenticationError(f"Failed to parse token response: {e}") from e
 
         return TokenResult(data)
+
+    def list_webauthn_devices(self) -> list[WebAuthnDevice]:
+        """List available FIDO2/WebAuthn devices.
+
+        Returns:
+            List of WebAuthnDevice objects representing connected devices.
+
+        Raises:
+            AuthenticationError: If the CLI command fails.
+
+        Example:
+            >>> devices = client.list_webauthn_devices()
+            >>> for d in devices:
+            ...     print(f"{d.index}: {d.product}")
+            0: YubiKey 5 NFC
+
+        Note:
+            This only lists USB/NFC security keys. macOS Touch ID and
+            iCloud Keychain passkeys are not detected by libfido2.
+        """
+        result = self._run_cli(["webauthn", "list"], check=False)
+
+        devices = []
+        lines = result.stdout.strip().split("\n")
+
+        # Skip header line ("INDEX  PRODUCT  PATH")
+        for line in lines[1:]:
+            if not line.strip():
+                continue
+            parts = line.split(None, 2)  # Split into max 3 parts
+            if len(parts) >= 3:
+                try:
+                    index = int(parts[0])
+                    product = parts[1]
+                    path = parts[2]
+                    devices.append(WebAuthnDevice(index=index, product=product, path=path))
+                except (ValueError, IndexError):
+                    continue
+
+        return devices
+
+    def check_status(
+        self,
+        file: Union[str, Path],
+        *,
+        url: Optional[str] = None,
+        insecure: bool = False,
+        auth_host: str = "auth.cern.ch",
+    ) -> CookieStatus:
+        """Check cookie expiration status.
+
+        Args:
+            file: Path to cookie file to check.
+            url: URL to verify cookies against (makes HTTP request).
+            insecure: Skip certificate validation when verifying.
+            auth_host: Authentication hostname for verification.
+
+        Returns:
+            CookieStatus object with cookie validity information.
+
+        Raises:
+            AuthenticationError: If the CLI command fails.
+
+        Example:
+            >>> status = client.check_status("cookies.txt")
+            >>> print(f"Has valid cookies: {status.has_valid_cookies}")
+
+            >>> status = client.check_status("cookies.txt", url="https://gitlab.cern.ch")
+            >>> print(f"Verified: {status.verified_valid}")
+        """
+        from datetime import datetime, timezone
+
+        args = ["status", "--file", str(file), "--json"]
+
+        if url:
+            args.extend(["--url", url])
+        if insecure:
+            args.append("--insecure")
+        args.extend(["--auth-host", auth_host])
+
+        result = self._run_cli(args, check=False)
+
+        # Parse JSON output
+        entries = []
+        verified = url is not None
+        verified_valid = False
+
+        try:
+            data = json.loads(result.stdout.strip())
+            if isinstance(data, dict):
+                # Handle structured JSON output if CLI returns it
+                verified_valid = data.get("verified_valid", False)
+                cookie_list = data.get("cookies", [])
+            else:
+                cookie_list = data if isinstance(data, list) else []
+
+            for cookie in cookie_list:
+                expires = None
+                if cookie.get("expires"):
+                    try:
+                        expires = datetime.fromisoformat(cookie["expires"].replace("Z", "+00:00"))
+                    except (ValueError, TypeError):
+                        pass
+
+                now = datetime.now(timezone.utc)
+                valid = expires is None or expires > now
+
+                entries.append(
+                    CookieStatusEntry(
+                        domain=cookie.get("domain", ""),
+                        name=cookie.get("name", ""),
+                        expires=expires,
+                        valid=valid,
+                    )
+                )
+        except json.JSONDecodeError:
+            # If JSON parsing fails, return empty status
+            pass
+
+        return CookieStatus(
+            entries=entries,
+            verified=verified,
+            verified_valid=verified_valid,
+        )
 
 
 # Default client instance for convenience functions

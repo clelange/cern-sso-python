@@ -60,3 +60,39 @@ class CookieStatus:
     def all_valid(self) -> bool:
         """Check if all cookies are valid."""
         return all(entry.valid for entry in self.entries)
+
+
+@dataclass
+class HarborSecret:
+    """Harbor CLI secret for Docker login.
+
+    Attributes:
+        username: Harbor username.
+        secret: CLI secret for docker login.
+
+    Example:
+        >>> secret = get_harbor_secret()
+        >>> print(f"docker login registry.cern.ch -u {secret.username} -p {secret.secret}")
+    """
+
+    username: str
+    secret: str
+
+
+@dataclass
+class OpenShiftLogin:
+    """OpenShift login credentials.
+
+    Attributes:
+        command: Full oc login command.
+        token: API token (sha256~...).
+        server: API server URL.
+
+    Example:
+        >>> login = get_openshift_token()
+        >>> print(login.command)  # oc login --token=... --server=...
+    """
+
+    command: str
+    token: str
+    server: str

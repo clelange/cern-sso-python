@@ -10,11 +10,11 @@ from typing import Optional, Union
 
 from .cookies import load_cookies
 from .exceptions import AuthenticationError, CLINotFoundError, CLIVersionError
-from .models import CookieStatus, CookieStatusEntry, WebAuthnDevice
+from .models import CookieStatus, CookieStatusEntry, HarborSecret, OpenShiftLogin, WebAuthnDevice
 from .tokens import TokenResult
 
-# Minimum CLI version required (0.25.0 adds webauthn device index)
-MIN_CLI_VERSION = "0.25.0"
+# Minimum CLI version required (0.27.0 adds harbor and openshift commands)
+MIN_CLI_VERSION = "0.27.0"
 
 
 class CERNSSOClient:
@@ -605,6 +605,224 @@ class CERNSSOClient:
             entries=entries,
             verified=verified,
             verified_valid=verified_valid,
+        )
+
+    def get_harbor_secret(
+        self,
+        url: str = "https://registry.cern.ch",
+        *,
+        user: Optional[str] = None,
+        otp: Optional[str] = None,
+        otp_command: Optional[str] = None,
+        otp_retries: Optional[int] = None,
+        use_otp: bool = False,
+        use_webauthn: bool = False,
+        webauthn_pin: Optional[str] = None,
+        webauthn_device: Optional[str] = None,
+        webauthn_device_index: Optional[int] = None,
+        webauthn_timeout: Optional[int] = None,
+        browser: bool = False,
+        keytab: Optional[str] = None,
+        use_keytab: bool = False,
+        use_password: bool = False,
+        use_ccache: bool = False,
+        krb5_config: Optional[str] = None,
+        insecure: bool = False,
+        auth_host: str = "auth.cern.ch",
+    ) -> HarborSecret:
+        """Get Harbor CLI secret for Docker login.
+
+        Authenticates to CERN Harbor registry and retrieves the CLI secret
+        that can be used with `docker login`.
+
+        Args:
+            url: Harbor registry URL (default: registry.cern.ch).
+            user: Kerberos username.
+            otp: OTP code for 2FA.
+            otp_command: Command to get OTP.
+            otp_retries: Max OTP retry attempts.
+            use_otp: Force OTP method.
+            use_webauthn: Force WebAuthn method.
+            webauthn_pin: PIN for FIDO2 security key.
+            webauthn_device: Path to specific FIDO2 device.
+            webauthn_device_index: Index of FIDO2 device.
+            webauthn_timeout: Timeout in seconds for FIDO2 interaction.
+            browser: Use browser for authentication.
+            keytab: Path to Kerberos keytab file.
+            use_keytab: Force keytab authentication.
+            use_password: Force password authentication.
+            use_ccache: Force credential cache authentication.
+            krb5_config: Kerberos config source.
+            insecure: Skip certificate validation.
+            auth_host: Authentication hostname.
+
+        Returns:
+            HarborSecret containing username and CLI secret.
+
+        Raises:
+            AuthenticationError: If authentication fails.
+
+        Example:
+            >>> secret = client.get_harbor_secret()
+            >>> print(f"docker login registry.cern.ch -u {secret.username} -p {secret.secret}")
+        """
+        args = ["harbor", "--url", url, "--auth-host", auth_host, "--json"]
+
+        if user:
+            args.extend(["--user", user])
+        if otp:
+            args.extend(["--otp", otp])
+        if otp_command:
+            args.extend(["--otp-command", otp_command])
+        if otp_retries is not None:
+            args.extend(["--otp-retries", str(otp_retries)])
+        if use_otp:
+            args.append("--use-otp")
+        if use_webauthn:
+            args.append("--use-webauthn")
+        if webauthn_pin:
+            args.extend(["--webauthn-pin", webauthn_pin])
+        if webauthn_device:
+            args.extend(["--webauthn-device", webauthn_device])
+        if webauthn_device_index is not None:
+            args.extend(["--webauthn-device-index", str(webauthn_device_index)])
+        if webauthn_timeout is not None:
+            args.extend(["--webauthn-timeout", str(webauthn_timeout)])
+        if browser:
+            args.append("--browser")
+        if keytab:
+            args.extend(["--keytab", keytab])
+        if use_keytab:
+            args.append("--use-keytab")
+        if use_password:
+            args.append("--use-password")
+        if use_ccache:
+            args.append("--use-ccache")
+        if krb5_config:
+            args.extend(["--krb5-config", krb5_config])
+        if insecure:
+            args.append("--insecure")
+
+        result = self._run_cli(args)
+
+        try:
+            data = json.loads(result.stdout.strip())
+        except json.JSONDecodeError as e:
+            raise AuthenticationError(f"Failed to parse harbor response: {e}") from e
+
+        return HarborSecret(
+            username=data.get("username", ""),
+            secret=data.get("secret", ""),
+        )
+
+    def get_openshift_token(
+        self,
+        url: str = "https://paas.cern.ch",
+        *,
+        user: Optional[str] = None,
+        otp: Optional[str] = None,
+        otp_command: Optional[str] = None,
+        otp_retries: Optional[int] = None,
+        use_otp: bool = False,
+        use_webauthn: bool = False,
+        webauthn_pin: Optional[str] = None,
+        webauthn_device: Optional[str] = None,
+        webauthn_device_index: Optional[int] = None,
+        webauthn_timeout: Optional[int] = None,
+        browser: bool = False,
+        keytab: Optional[str] = None,
+        use_keytab: bool = False,
+        use_password: bool = False,
+        use_ccache: bool = False,
+        krb5_config: Optional[str] = None,
+        insecure: bool = False,
+        auth_host: str = "auth.cern.ch",
+    ) -> OpenShiftLogin:
+        """Get OpenShift API token for oc login.
+
+        Authenticates to CERN OpenShift (OKD/PaaS) and retrieves the API token
+        that can be used with the `oc` CLI.
+
+        Args:
+            url: OpenShift cluster URL (default: paas.cern.ch).
+            user: Kerberos username.
+            otp: OTP code for 2FA.
+            otp_command: Command to get OTP.
+            otp_retries: Max OTP retry attempts.
+            use_otp: Force OTP method.
+            use_webauthn: Force WebAuthn method.
+            webauthn_pin: PIN for FIDO2 security key.
+            webauthn_device: Path to specific FIDO2 device.
+            webauthn_device_index: Index of FIDO2 device.
+            webauthn_timeout: Timeout in seconds for FIDO2 interaction.
+            browser: Use browser for authentication.
+            keytab: Path to Kerberos keytab file.
+            use_keytab: Force keytab authentication.
+            use_password: Force password authentication.
+            use_ccache: Force credential cache authentication.
+            krb5_config: Kerberos config source.
+            insecure: Skip certificate validation.
+            auth_host: Authentication hostname.
+
+        Returns:
+            OpenShiftLogin containing the full login command, token, and server.
+
+        Raises:
+            AuthenticationError: If authentication fails.
+
+        Example:
+            >>> login = client.get_openshift_token()
+            >>> print(login.command)  # oc login --token=... --server=...
+            >>> print(login.token)    # sha256~...
+        """
+        args = ["openshift", "--url", url, "--auth-host", auth_host, "--json"]
+
+        if user:
+            args.extend(["--user", user])
+        if otp:
+            args.extend(["--otp", otp])
+        if otp_command:
+            args.extend(["--otp-command", otp_command])
+        if otp_retries is not None:
+            args.extend(["--otp-retries", str(otp_retries)])
+        if use_otp:
+            args.append("--use-otp")
+        if use_webauthn:
+            args.append("--use-webauthn")
+        if webauthn_pin:
+            args.extend(["--webauthn-pin", webauthn_pin])
+        if webauthn_device:
+            args.extend(["--webauthn-device", webauthn_device])
+        if webauthn_device_index is not None:
+            args.extend(["--webauthn-device-index", str(webauthn_device_index)])
+        if webauthn_timeout is not None:
+            args.extend(["--webauthn-timeout", str(webauthn_timeout)])
+        if browser:
+            args.append("--browser")
+        if keytab:
+            args.extend(["--keytab", keytab])
+        if use_keytab:
+            args.append("--use-keytab")
+        if use_password:
+            args.append("--use-password")
+        if use_ccache:
+            args.append("--use-ccache")
+        if krb5_config:
+            args.extend(["--krb5-config", krb5_config])
+        if insecure:
+            args.append("--insecure")
+
+        result = self._run_cli(args)
+
+        try:
+            data = json.loads(result.stdout.strip())
+        except json.JSONDecodeError as e:
+            raise AuthenticationError(f"Failed to parse openshift response: {e}") from e
+
+        return OpenShiftLogin(
+            command=data.get("command", ""),
+            token=data.get("token", ""),
+            server=data.get("server", ""),
         )
 
 

@@ -644,3 +644,179 @@ class TestModels:
 
         assert status.has_valid_cookies is True
         assert status.all_valid is True
+
+
+class TestGetHarborSecret:
+    """Tests for get_harbor_secret function."""
+
+    def test_get_harbor_secret_basic(self):
+        """Test basic Harbor secret retrieval."""
+        harbor_response = {
+            "username": "testuser",
+            "secret": "secret-cli-token-12345",
+        }
+
+        commands_run = []
+
+        def mock_run_cli(args, **kwargs):
+            commands_run.append(args)
+            return subprocess.CompletedProcess(args, 0, json.dumps(harbor_response), "")
+
+        with patch("cern_sso.CERNSSOClient._run_cli", side_effect=mock_run_cli):
+            with patch("shutil.which", return_value="/usr/bin/cern-sso-cli"):
+                client = CERNSSOClient(verify_version=False)
+                secret = client.get_harbor_secret()
+
+                assert secret.username == "testuser"
+                assert secret.secret == "secret-cli-token-12345"
+
+        cmd = commands_run[-1]
+        assert "harbor" in cmd
+        assert "--json" in cmd
+
+    def test_get_harbor_secret_with_custom_url(self):
+        """Test Harbor secret retrieval with custom URL."""
+        harbor_response = {
+            "username": "testuser",
+            "secret": "secret123",
+        }
+
+        commands_run = []
+
+        def mock_run_cli(args, **kwargs):
+            commands_run.append(args)
+            return subprocess.CompletedProcess(args, 0, json.dumps(harbor_response), "")
+
+        with patch("cern_sso.CERNSSOClient._run_cli", side_effect=mock_run_cli):
+            with patch("shutil.which", return_value="/usr/bin/cern-sso-cli"):
+                client = CERNSSOClient(verify_version=False)
+                client.get_harbor_secret(url="https://registry-dev.cern.ch")
+
+        cmd = commands_run[-1]
+        assert "--url" in cmd
+        assert "https://registry-dev.cern.ch" in cmd
+
+    def test_get_harbor_secret_with_otp(self):
+        """Test Harbor secret retrieval with OTP."""
+        harbor_response = {
+            "username": "testuser",
+            "secret": "secret123",
+        }
+
+        commands_run = []
+
+        def mock_run_cli(args, **kwargs):
+            commands_run.append(args)
+            return subprocess.CompletedProcess(args, 0, json.dumps(harbor_response), "")
+
+        with patch("cern_sso.CERNSSOClient._run_cli", side_effect=mock_run_cli):
+            with patch("shutil.which", return_value="/usr/bin/cern-sso-cli"):
+                client = CERNSSOClient(verify_version=False)
+                client.get_harbor_secret(otp="123456", user="alice")
+
+        cmd = commands_run[-1]
+        assert "--otp" in cmd
+        assert "123456" in cmd
+        assert "--user" in cmd
+        assert "alice" in cmd
+
+
+class TestGetOpenShiftToken:
+    """Tests for get_openshift_token function."""
+
+    def test_get_openshift_token_basic(self):
+        """Test basic OpenShift token retrieval."""
+        openshift_response = {
+            "command": "oc login --token=sha256~abc123 --server=https://api.paas.cern.ch:6443",
+            "token": "sha256~abc123",
+            "server": "https://api.paas.cern.ch:6443",
+        }
+
+        commands_run = []
+
+        def mock_run_cli(args, **kwargs):
+            commands_run.append(args)
+            return subprocess.CompletedProcess(args, 0, json.dumps(openshift_response), "")
+
+        with patch("cern_sso.CERNSSOClient._run_cli", side_effect=mock_run_cli):
+            with patch("shutil.which", return_value="/usr/bin/cern-sso-cli"):
+                client = CERNSSOClient(verify_version=False)
+                login = client.get_openshift_token()
+
+                assert login.command == openshift_response["command"]
+                assert login.token == "sha256~abc123"
+                assert login.server == "https://api.paas.cern.ch:6443"
+
+        cmd = commands_run[-1]
+        assert "openshift" in cmd
+        assert "--json" in cmd
+
+    def test_get_openshift_token_with_custom_url(self):
+        """Test OpenShift token retrieval with custom URL."""
+        openshift_response = {
+            "command": "oc login --token=sha256~def456 --server=https://api.paas-dev.cern.ch:6443",
+            "token": "sha256~def456",
+            "server": "https://api.paas-dev.cern.ch:6443",
+        }
+
+        commands_run = []
+
+        def mock_run_cli(args, **kwargs):
+            commands_run.append(args)
+            return subprocess.CompletedProcess(args, 0, json.dumps(openshift_response), "")
+
+        with patch("cern_sso.CERNSSOClient._run_cli", side_effect=mock_run_cli):
+            with patch("shutil.which", return_value="/usr/bin/cern-sso-cli"):
+                client = CERNSSOClient(verify_version=False)
+                client.get_openshift_token(url="https://paas-dev.cern.ch")
+
+        cmd = commands_run[-1]
+        assert "--url" in cmd
+        assert "https://paas-dev.cern.ch" in cmd
+
+    def test_get_openshift_token_with_browser(self):
+        """Test OpenShift token retrieval with browser flag."""
+        openshift_response = {
+            "command": "oc login --token=sha256~xyz --server=https://api.paas.cern.ch:6443",
+            "token": "sha256~xyz",
+            "server": "https://api.paas.cern.ch:6443",
+        }
+
+        commands_run = []
+
+        def mock_run_cli(args, **kwargs):
+            commands_run.append(args)
+            return subprocess.CompletedProcess(args, 0, json.dumps(openshift_response), "")
+
+        with patch("cern_sso.CERNSSOClient._run_cli", side_effect=mock_run_cli):
+            with patch("shutil.which", return_value="/usr/bin/cern-sso-cli"):
+                client = CERNSSOClient(verify_version=False)
+                client.get_openshift_token(browser=True)
+
+        cmd = commands_run[-1]
+        assert "--browser" in cmd
+
+
+class TestNewModels:
+    """Tests for HarborSecret and OpenShiftLogin models."""
+
+    def test_harbor_secret(self):
+        """Test HarborSecret dataclass."""
+        from cern_sso.models import HarborSecret
+
+        secret = HarborSecret(username="alice", secret="cli-secret-123")
+        assert secret.username == "alice"
+        assert secret.secret == "cli-secret-123"
+
+    def test_openshift_login(self):
+        """Test OpenShiftLogin dataclass."""
+        from cern_sso.models import OpenShiftLogin
+
+        login = OpenShiftLogin(
+            command="oc login --token=sha256~abc --server=https://api.paas.cern.ch:6443",
+            token="sha256~abc",
+            server="https://api.paas.cern.ch:6443",
+        )
+        assert login.command.startswith("oc login")
+        assert login.token == "sha256~abc"
+        assert login.server == "https://api.paas.cern.ch:6443"

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cern-sso-python"
-version = "0.3.0"
+version = "0.4.0"
 description = "Python wrapper for cern-sso-cli - CERN SSO authentication"
 readme = "README.md"
 license = "GPL-3.0-or-later"

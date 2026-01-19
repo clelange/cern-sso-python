@@ -29,10 +29,10 @@ from .exceptions import (
     CLIVersionError,
     CookieError,
 )
-from .models import CookieStatus, CookieStatusEntry, WebAuthnDevice
+from .models import CookieStatus, CookieStatusEntry, HarborSecret, OpenShiftLogin, WebAuthnDevice
 from .tokens import TokenResult
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 __all__ = [
     # Main functions
@@ -42,12 +42,16 @@ __all__ = [
     "load_cookies",
     "list_webauthn_devices",
     "check_status",
+    "get_harbor_secret",
+    "get_openshift_token",
     # Classes
     "CERNSSOClient",
     "TokenResult",
     "WebAuthnDevice",
     "CookieStatus",
     "CookieStatusEntry",
+    "HarborSecret",
+    "OpenShiftLogin",
     # Utilities
     "to_requests_jar",
     # Exceptions
@@ -356,6 +360,171 @@ def check_status(
     return _get_default_client().check_status(
         file,
         url=url,
+        insecure=insecure,
+        auth_host=auth_host,
+    )
+
+
+def get_harbor_secret(
+    url: str = "https://registry.cern.ch",
+    *,
+    user: Optional[str] = None,
+    otp: Optional[str] = None,
+    otp_command: Optional[str] = None,
+    otp_retries: Optional[int] = None,
+    use_otp: bool = False,
+    use_webauthn: bool = False,
+    webauthn_pin: Optional[str] = None,
+    webauthn_device: Optional[str] = None,
+    webauthn_device_index: Optional[int] = None,
+    webauthn_timeout: Optional[int] = None,
+    browser: bool = False,
+    keytab: Optional[str] = None,
+    use_keytab: bool = False,
+    use_password: bool = False,
+    use_ccache: bool = False,
+    krb5_config: Optional[str] = None,
+    insecure: bool = False,
+    auth_host: str = "auth.cern.ch",
+) -> HarborSecret:
+    """Get Harbor CLI secret for Docker login.
+
+    This is a convenience function that uses the default client.
+    For more control, use CERNSSOClient directly.
+
+    Args:
+        url: Harbor registry URL (default: registry.cern.ch).
+        user: Kerberos username.
+        otp: OTP code for 2FA.
+        otp_command: Command to get OTP.
+        otp_retries: Max OTP retry attempts.
+        use_otp: Force OTP method.
+        use_webauthn: Force WebAuthn method.
+        webauthn_pin: PIN for FIDO2 security key.
+        webauthn_device: Path to specific FIDO2 device.
+        webauthn_device_index: Index of FIDO2 device.
+        webauthn_timeout: Timeout in seconds for FIDO2 interaction.
+        browser: Use browser for authentication.
+        keytab: Path to Kerberos keytab file.
+        use_keytab: Force keytab authentication.
+        use_password: Force password authentication.
+        use_ccache: Force credential cache authentication.
+        krb5_config: Kerberos config source.
+        insecure: Skip certificate validation.
+        auth_host: Authentication hostname.
+
+    Returns:
+        HarborSecret containing username and CLI secret.
+
+    Raises:
+        CLINotFoundError: If cern-sso-cli is not installed.
+        AuthenticationError: If authentication fails.
+
+    Example:
+        >>> secret = get_harbor_secret()
+        >>> print(f"docker login registry.cern.ch -u {secret.username} -p {secret.secret}")
+    """
+    return _get_default_client().get_harbor_secret(
+        url,
+        user=user,
+        otp=otp,
+        otp_command=otp_command,
+        otp_retries=otp_retries,
+        use_otp=use_otp,
+        use_webauthn=use_webauthn,
+        webauthn_pin=webauthn_pin,
+        webauthn_device=webauthn_device,
+        webauthn_device_index=webauthn_device_index,
+        webauthn_timeout=webauthn_timeout,
+        browser=browser,
+        keytab=keytab,
+        use_keytab=use_keytab,
+        use_password=use_password,
+        use_ccache=use_ccache,
+        krb5_config=krb5_config,
+        insecure=insecure,
+        auth_host=auth_host,
+    )
+
+
+def get_openshift_token(
+    url: str = "https://paas.cern.ch",
+    *,
+    user: Optional[str] = None,
+    otp: Optional[str] = None,
+    otp_command: Optional[str] = None,
+    otp_retries: Optional[int] = None,
+    use_otp: bool = False,
+    use_webauthn: bool = False,
+    webauthn_pin: Optional[str] = None,
+    webauthn_device: Optional[str] = None,
+    webauthn_device_index: Optional[int] = None,
+    webauthn_timeout: Optional[int] = None,
+    browser: bool = False,
+    keytab: Optional[str] = None,
+    use_keytab: bool = False,
+    use_password: bool = False,
+    use_ccache: bool = False,
+    krb5_config: Optional[str] = None,
+    insecure: bool = False,
+    auth_host: str = "auth.cern.ch",
+) -> OpenShiftLogin:
+    """Get OpenShift API token for oc login.
+
+    This is a convenience function that uses the default client.
+    For more control, use CERNSSOClient directly.
+
+    Args:
+        url: OpenShift cluster URL (default: paas.cern.ch).
+        user: Kerberos username.
+        otp: OTP code for 2FA.
+        otp_command: Command to get OTP.
+        otp_retries: Max OTP retry attempts.
+        use_otp: Force OTP method.
+        use_webauthn: Force WebAuthn method.
+        webauthn_pin: PIN for FIDO2 security key.
+        webauthn_device: Path to specific FIDO2 device.
+        webauthn_device_index: Index of FIDO2 device.
+        webauthn_timeout: Timeout in seconds for FIDO2 interaction.
+        browser: Use browser for authentication.
+        keytab: Path to Kerberos keytab file.
+        use_keytab: Force keytab authentication.
+        use_password: Force password authentication.
+        use_ccache: Force credential cache authentication.
+        krb5_config: Kerberos config source.
+        insecure: Skip certificate validation.
+        auth_host: Authentication hostname.
+
+    Returns:
+        OpenShiftLogin containing the full login command, token, and server.
+
+    Raises:
+        CLINotFoundError: If cern-sso-cli is not installed.
+        AuthenticationError: If authentication fails.
+
+    Example:
+        >>> login = get_openshift_token()
+        >>> print(login.command)  # oc login --token=... --server=...
+        >>> print(login.token)    # sha256~...
+    """
+    return _get_default_client().get_openshift_token(
+        url,
+        user=user,
+        otp=otp,
+        otp_command=otp_command,
+        otp_retries=otp_retries,
+        use_otp=use_otp,
+        use_webauthn=use_webauthn,
+        webauthn_pin=webauthn_pin,
+        webauthn_device=webauthn_device,
+        webauthn_device_index=webauthn_device_index,
+        webauthn_timeout=webauthn_timeout,
+        browser=browser,
+        keytab=keytab,
+        use_keytab=use_keytab,
+        use_password=use_password,
+        use_ccache=use_ccache,
+        krb5_config=krb5_config,
         insecure=insecure,
         auth_host=auth_host,
     )

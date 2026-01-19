@@ -4,7 +4,7 @@ Python wrapper for [cern-sso-cli](https://github.com/clelange/cern-sso-cli) - CE
 
 ## Installation
 
-1. **Install the CLI** (v0.25.0+): See [cern-sso-cli installation instructions](https://github.com/clelange/cern-sso-cli#installation)
+1. **Install the CLI** (v0.27.0+): See [cern-sso-cli installation instructions](https://github.com/clelange/cern-sso-cli#installation)
 
 2. **Install the Python package**:
    ```bash
@@ -195,6 +195,39 @@ status = check_status("cookies.txt", url="https://gitlab.cern.ch")
 print(f"Server verified: {status.verified_valid}")
 ```
 
+### Harbor Docker Login
+
+Get your CLI secret for authenticating to CERN's Harbor container registry:
+
+```python
+from cern_sso import get_harbor_secret
+
+# Get secret for registry.cern.ch (default)
+secret = get_harbor_secret()
+print(f"docker login registry.cern.ch -u {secret.username} -p {secret.secret}")
+
+# Use with custom Harbor instance
+secret = get_harbor_secret(url="https://registry-dev.cern.ch")
+```
+
+### OpenShift Login
+
+Get your API token for authenticating to CERN's OpenShift/OKD platform:
+
+```python
+from cern_sso import get_openshift_token
+
+# Get token for paas.cern.ch (default)
+login = get_openshift_token()
+
+# Print the full login command
+print(login.command)  # oc login --token=sha256~... --server=https://api.paas.cern.ch:6443
+
+# Or use components directly
+print(f"Token: {login.token}")
+print(f"Server: {login.server}")
+```
+
 ### Keytab Authentication
 
 For automated environments, you can use Kerberos keytabs:
@@ -280,6 +313,18 @@ Check cookie expiration status.
 
 Returns a `CookieStatus` object with `entries`, `verified`, `verified_valid`, `has_valid_cookies`, and `all_valid` attributes.
 
+### `get_harbor_secret(url="https://registry.cern.ch", **kwargs) -> HarborSecret`
+
+Get Harbor CLI secret for Docker login. Accepts same authentication parameters as `get_cookies`.
+
+Returns a `HarborSecret` object with `username` and `secret` attributes.
+
+### `get_openshift_token(url="https://paas.cern.ch", **kwargs) -> OpenShiftLogin`
+
+Get OpenShift API token for `oc login`. Accepts same authentication parameters as `get_cookies`.
+
+Returns an `OpenShiftLogin` object with `command`, `token`, and `server` attributes.
+
 ### `CERNSSOClient(cli_path=None, quiet=True)`
 
 Low-level client for direct CLI invocation.
@@ -295,14 +340,14 @@ Low-level client for direct CLI invocation.
 |-----------|-------------|
 | `CERNSSOError` | Base exception |
 | `CLINotFoundError` | cern-sso-cli not found in PATH |
-| `CLIVersionError` | CLI version too old (requires ≥0.25.0) |
+| `CLIVersionError` | CLI version too old (requires ≥0.27.0) |
 | `AuthenticationError` | Authentication failed |
 | `CookieError` | Cookie file operations failed |
 
 ## Requirements
 
 - Python 3.9+
-- [cern-sso-cli](https://github.com/clelange/cern-sso-cli) v0.25.0 or later
+- [cern-sso-cli](https://github.com/clelange/cern-sso-cli) v0.27.0 or later
 
 ## License
 
